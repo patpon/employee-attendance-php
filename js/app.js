@@ -1298,6 +1298,7 @@ async function renderBonus(container) {
                     <div style="display:flex;gap:8px;">
                         <button class="btn-primary" onclick="loadBonusPage()">🔄 โหลดข้อมูล</button>
                         <button class="btn-success" onclick="initBonusAllEmployees()">➕ เพิ่มพนักงานทั้งหมด</button>
+                        <button onclick="showBonusSummaryReport()" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #7c3aed;background:#f5f3ff;color:#7c3aed;font-weight:600;">📋 รายงานสรุป</button>
                     </div>
                 </div>
             </div>
@@ -1415,9 +1416,10 @@ function renderBonusCard(rec, idx) {
                 </div>
                 <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">ปีประเมิน ${bonusYear}</p>
             </div>
-            <!-- Load attendance btn -->
-            <div style="flex-shrink:0;">
+            <!-- Action buttons -->
+            <div style="flex-shrink:0;display:flex;gap:8px;align-items:flex-start;">
                 <button onclick="loadBonusAttendance('${rec.id}','${rec.employeeId}')" style="font-size:12px;padding:6px 12px;border:1px solid #3b82f6;background:#eff6ff;color:#2563eb;border-radius:6px;cursor:pointer;">📊 ดึงสรุปเวลาทำงาน</button>
+                <button onclick="deleteBonusRecord('${rec.id}','${escHtml(rec.empName)}')" style="font-size:12px;padding:6px 10px;border:1px solid #fca5a5;background:#fff1f2;color:#dc2626;border-radius:6px;cursor:pointer;" title="ลบพนักงานออกจากรายการโบนัส">🗑️ ลบ</button>
             </div>
         </div>
 
@@ -1526,6 +1528,16 @@ function showAddBehaviorForm(recId, type) {
     document.getElementById(`blogDesc_${recId}`).focus();
 }
 
+async function deleteBonusRecord(recId, empName) {
+    if (!confirm(`ลบ "${empName}" ออกจากรายการโบนัสปี ${bonusYear}?\n(ข้อมูลพฤติกรรมและการพิจารณาจะถูกลบด้วย)`)) return;
+    try {
+        await api.deleteBonusRecord(recId);
+        bonusRecords = bonusRecords.filter(r => r.id !== recId);
+        renderBonusContent();
+        showBonusToast('🗑️ ลบเรียบร้อยแล้ว');
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
 async function saveBehaviorLog(recId, type) {
     const date = document.getElementById(`blogDate_${recId}`).value;
     const desc = document.getElementById(`blogDesc_${recId}`).value.trim();
@@ -1604,6 +1616,115 @@ async function saveBonusRecord(recId) {
         setTimeout(() => { const el = document.getElementById(`bonusCard_${recId}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
         showBonusToast('✅ บันทึกสำเร็จ!');
     } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
+function showBonusSummaryReport() {
+    if (bonusRecords.length === 0) { alert('ไม่มีข้อมูลโบนัส — กรุณาโหลดข้อมูลก่อน'); return; }
+
+    const statusMap = { pending: '🟡 รอพิจารณา', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ไม่อนุมัติ' };
+    const approved  = bonusRecords.filter(r => r.bonusStatus === 'approved');
+    const pending   = bonusRecords.filter(r => r.bonusStatus === 'pending');
+    const rejected  = bonusRecords.filter(r => r.bonusStatus === 'rejected');
+    const totalBudget = approved.reduce((s, r) => s + (parseFloat(r.bonusAmount) || 0), 0);
+
+    const sorted = [...bonusRecords].sort((a, b) => (parseFloat(b.bonusAmount)||0) - (parseFloat(a.bonusAmount)||0));
+
+    const rows = sorted.map((r, i) => {
+        const amt = parseFloat(r.bonusAmount) || 0;
+        const att = r.attendanceSummary;
+        const stLabel = statusMap[r.bonusStatus] || '🟡 รอพิจารณา';
+        const rowBg = r.bonusStatus === 'approved' ? '#f0fdf4' : r.bonusStatus === 'rejected' ? '#fff1f2' : '';
+        return `<tr style="background:${rowBg};">
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;color:#6b7280;">${i+1}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">
+                <div style="font-weight:600;color:#111827;">${escHtml(r.empName)}</div>
+                <div style="font-size:11px;color:#9ca3af;">รหัส ${escHtml(r.empCode)}</div>
+            </td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${att ? att.workingDays+' วัน' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att&&att.absent>0?'#ef4444':'#10b981'};font-weight:600;">${att ? att.absent+' วัน' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att&&att.totalDeduction>0?'#f59e0b':'#10b981'};">${att ? att.totalDeduction.toLocaleString()+'฿' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${stLabel}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;font-size:15px;color:${amt>0?'#059669':'#6b7280'};">${amt > 0 ? amt.toLocaleString()+' ฿' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">${escHtml(r.summary||'-')}</td>
+        </tr>`;
+    }).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'bonusReportModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:16px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <h2 style="font-size:20px;font-weight:700;color:#111827;margin:0;">📋 รายงานสรุปโบนัสประจำปี ${bonusYear}</h2>
+                    <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">สรุปภาพรวมการพิจารณาโบนัสพนักงานทั้งหมด</p>
+                </div>
+                <button onclick="document.getElementById('bonusReportModal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;padding:4px 8px;">✕</button>
+            </div>
+            <!-- Stats Row -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e5e7eb;">
+                <div style="background:#f0fdf4;padding:16px 20px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#059669;">${approved.length}</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">🟢 อนุมัติแล้ว</div>
+                </div>
+                <div style="background:#fffbeb;padding:16px 20px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#d97706;">${pending.length}</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">🟡 รอพิจารณา</div>
+                </div>
+                <div style="background:#fff1f2;padding:16px 20px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#dc2626;">${rejected.length}</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">🔴 ไม่อนุมัติ</div>
+                </div>
+                <div style="background:#f5f3ff;padding:16px 20px;text-align:center;">
+                    <div style="font-size:22px;font-weight:700;color:#7c3aed;">${totalBudget.toLocaleString()} ฿</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">💰 งบรวมทั้งหมด</div>
+                </div>
+            </div>
+            <!-- Table -->
+            <div style="padding:16px 24px;overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">#</th>
+                            <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">ชื่อพนักงาน</th>
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">วันทำงาน</th>
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">ขาดงาน</th>
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">หักรวม</th>
+                            <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">สถานะ</th>
+                            <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">โบนัส (บาท)</th>
+                            <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;">หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot>
+                        <tr style="background:#f5f3ff;">
+                            <td colspan="6" style="padding:12px;font-weight:700;color:#7c3aed;border-top:2px solid #e5e7eb;">💰 รวมงบโบนัสที่อนุมัติ</td>
+                            <td style="padding:12px;text-align:right;font-weight:700;font-size:16px;color:#7c3aed;border-top:2px solid #e5e7eb;">${totalBudget.toLocaleString()} ฿</td>
+                            <td style="border-top:2px solid #e5e7eb;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+                <button onclick="printBonusReport()" style="padding:8px 18px;border:1px solid #7c3aed;background:#f5f3ff;color:#7c3aed;border-radius:8px;cursor:pointer;font-weight:600;">🖨️ พิมพ์รายงาน</button>
+                <button onclick="document.getElementById('bonusReportModal').remove()" style="padding:8px 18px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;cursor:pointer;">ปิด</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+function printBonusReport() {
+    const modal = document.getElementById('bonusReportModal');
+    if (!modal) return;
+    const content = modal.querySelector('div');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>รายงานโบนัสประจำปี ${bonusYear}</title>
+    <style>body{font-family:'Sarabun',sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:13px;}th,td{padding:8px 10px;border:1px solid #ccc;}th{background:#f3f4f6;font-weight:600;}tr:nth-child(even){background:#f9fafb;}.no-print{display:none;}@media print{.no-print{display:none;}}</style>
+    </head><body>${content.innerHTML}</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
 }
 
 function showBonusToast(msg) {
