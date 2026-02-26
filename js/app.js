@@ -1376,7 +1376,7 @@ function renderBonusContent() {
         ? bonusRecords.filter(r => r.empName.toLowerCase().includes(q) || r.empCode.toLowerCase().includes(q))
         : [...bonusRecords];
     filtered.sort((a, b) => {
-        const cmp = a.empName.localeCompare(b.empName, 'th');
+        const cmp = a.empCode.localeCompare(b.empCode, undefined, { numeric: true, sensitivity: 'base' });
         return bonusSort === 'asc' ? cmp : -cmp;
     });
     if (filtered.length === 0) {
