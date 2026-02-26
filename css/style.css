@@ -611,3 +611,15 @@ input[type="checkbox"] {
 /* Space between items */
 .space-y-3 > * + * { margin-top: 12px; }
 .space-y-4 > * + * { margin-top: 16px; }
+
+/* Bonus Page */
+.bonus-behavior-grid {
+    grid-template-columns: 1fr 1fr;
+}
+.bonus-form-grid {
+    grid-template-columns: auto auto 1fr;
+}
+@media (max-width: 640px) {
+    .bonus-behavior-grid { grid-template-columns: 1fr; }
+    .bonus-form-grid { grid-template-columns: 1fr; }
+}

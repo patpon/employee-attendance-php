@@ -33,7 +33,7 @@ let currentUser = { username: '', displayName: '', role: 'viewer' };
 
 // Role-based menu permissions
 const ROLE_PERMISSIONS = {
-    admin:    ['dashboard', 'import', 'attendance', 'reports', 'settings'],
+    admin:    ['dashboard', 'import', 'attendance', 'reports', 'bonus', 'settings'],
     importer: ['import'],
 };
 
@@ -123,6 +123,7 @@ function renderPage(page) {
         case 'import': renderImport(main); break;
         case 'attendance': renderAttendance(main); break;
         case 'reports': renderReports(main); break;
+        case 'bonus': renderBonus(main); break;
         case 'settings': renderSettings(main); break;
         default: main.innerHTML = '<p>Page not found</p>';
     }
@@ -1261,6 +1262,346 @@ async function saveSettings() {
     } catch (err) {
         alert('เกิดข้อผิดพลาด: ' + err.message);
     }
+}
+
+// ============================================
+// BONUS PAGE
+// ============================================
+let bonusYear = new Date().getFullYear();
+let bonusRecords = [];
+let bonusEmployees = [];
+
+async function renderBonus(container) {
+    bonusYear = new Date().getFullYear();
+    container.innerHTML = `
+        <div style="max-width:960px;margin:0 auto;">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">🏆 โบนัสประจำปี</h1>
+                <p class="text-gray-500 text-sm mt-1">ประเมินผลงานและพิจารณาโบนัสพนักงาน</p>
+            </div>
+            <div class="card mb-6" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <label class="text-sm text-gray-600" style="display:block;margin-bottom:4px;">ปี (ค.ศ.)</label>
+                    <input type="number" id="bonusYear" class="input-field" value="${bonusYear}" min="2020" max="2035" style="width:120px;" onchange="bonusYear=parseInt(this.value)">
+                </div>
+                <div style="margin-top:20px;">
+                    <button class="btn-primary" onclick="loadBonusPage()">🔄 โหลดข้อมูล</button>
+                    <button class="btn-success" onclick="initBonusAllEmployees()" style="margin-left:8px;">➕ เพิ่มพนักงานทั้งหมด</button>
+                </div>
+            </div>
+            <div id="bonusContent">
+                <div style="text-align:center;padding:48px;color:#9ca3af;">กรุณากด "โหลดข้อมูล" เพื่อเริ่มต้น</div>
+            </div>
+        </div>`;
+}
+
+async function loadBonusPage() {
+    bonusYear = parseInt(document.getElementById('bonusYear').value);
+    const content = document.getElementById('bonusContent');
+    content.innerHTML = `<div style="text-align:center;padding:48px;color:#6b7280;"><div style="font-size:32px;margin-bottom:8px;">⚙️</div>กำลังโหลด...</div>`;
+    try {
+        [bonusRecords, bonusEmployees] = await Promise.all([
+            api.getBonusRecords({ shopId: DEFAULT_SHOP_ID, year: bonusYear }),
+            api.getEmployees(),
+        ]);
+        renderBonusContent();
+    } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">เกิดข้อผิดพลาด: ${escHtml(err.message)}</div>`;
+    }
+}
+
+async function initBonusAllEmployees() {
+    bonusYear = parseInt(document.getElementById('bonusYear').value);
+    const shopEmps = bonusEmployees.filter(e => e.shopId === DEFAULT_SHOP_ID);
+    if (shopEmps.length === 0) { alert('ไม่พบพนักงาน'); return; }
+
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...';
+    try {
+        for (const emp of shopEmps) {
+            await api.createBonusRecord({ shopId: DEFAULT_SHOP_ID, employeeId: emp.id, empCode: emp.empCode, empName: emp.name, year: bonusYear });
+        }
+        await loadBonusPage();
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+    btn.disabled = false; btn.textContent = '➕ เพิ่มพนักงานทั้งหมด';
+}
+
+function renderBonusContent() {
+    const content = document.getElementById('bonusContent');
+    if (bonusRecords.length === 0) {
+        content.innerHTML = `<div class="card" style="text-align:center;padding:48px;color:#9ca3af;">
+            <div style="font-size:48px;margin-bottom:12px;">📋</div>
+            <p>ยังไม่มีข้อมูลโบนัสปี ${bonusYear}</p>
+            <p style="font-size:13px;margin-top:8px;">กด "เพิ่มพนักงานทั้งหมด" เพื่อสร้างรายการ</p>
+        </div>`;
+        return;
+    }
+    content.innerHTML = bonusRecords.map((rec, idx) => renderBonusCard(rec, idx)).join('');
+}
+
+function renderBonusCard(rec, idx) {
+    const statusMap = { pending: { label: 'รอพิจารณา', color: '#f59e0b', bg: '#fffbeb' }, approved: { label: 'อนุมัติแล้ว', color: '#10b981', bg: '#ecfdf5' }, rejected: { label: 'ไม่อนุมัติ', color: '#ef4444', bg: '#fef2f2' } };
+    const st = statusMap[rec.bonusStatus] || statusMap.pending;
+    const att = rec.attendanceSummary;
+    const goodLogs = (rec.behaviorLogs || []).filter(l => l.type === 'good');
+    const badLogs  = (rec.behaviorLogs || []).filter(l => l.type === 'bad');
+
+    return `
+    <div class="card mb-6" id="bonusCard_${rec.id}">
+        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+            <!-- Photo -->
+            <div style="flex-shrink:0;text-align:center;">
+                <div id="photoWrap_${rec.id}" style="width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid #e5e7eb;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="document.getElementById('photoInput_${rec.id}').click()">
+                    ${rec.photo ? `<img src="${rec.photo}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:36px;">👤</span>`}
+                </div>
+                <input type="file" id="photoInput_${rec.id}" accept="image/*" style="display:none;" onchange="uploadBonusPhoto('${rec.id}',this)">
+                <div style="font-size:10px;color:#9ca3af;margin-top:4px;">คลิกเพื่อเปลี่ยนรูป</div>
+            </div>
+            <!-- Header info -->
+            <div style="flex:1;min-width:200px;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <h3 style="font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">${escHtml(rec.empName)}</h3>
+                    <span style="font-size:12px;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:8px;">รหัส ${escHtml(rec.empCode)}</span>
+                    <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:10px;color:${st.color};background:${st.bg};">${st.label}</span>
+                </div>
+                <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">ปีประเมิน ${bonusYear}</p>
+            </div>
+            <!-- Load attendance btn -->
+            <div style="flex-shrink:0;">
+                <button onclick="loadBonusAttendance('${rec.id}','${rec.employeeId}')" style="font-size:12px;padding:6px 12px;border:1px solid #3b82f6;background:#eff6ff;color:#2563eb;border-radius:6px;cursor:pointer;">📊 ดึงสรุปเวลาทำงาน</button>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        ${att ? `
+        <div style="margin-top:16px;padding:12px 16px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:10px;border:1px solid #bae6fd;">
+            <div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:10px;">📊 สรุปเวลาทำงานปี ${bonusYear}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
+                ${renderAttSummaryItem('✅ ทำงาน', att.workingDays + ' วัน', '#10b981')}
+                ${renderAttSummaryItem('🎌 หยุด', att.holidays + ' วัน', '#6b7280')}
+                ${renderAttSummaryItem('❌ ขาดงาน', att.absent + ' วัน', att.absent > 0 ? '#ef4444' : '#10b981')}
+                ${renderAttSummaryItem('⏰ สายเข้างาน', minutesToTime(att.late1Minutes) + ' (' + att.late1Baht + '฿)', att.late1Baht > 0 ? '#f59e0b' : '#10b981')}
+                ${renderAttSummaryItem('☕ สายพัก', minutesToTime(att.late2Minutes) + ' (' + att.late2Baht + '฿)', att.late2Baht > 0 ? '#f59e0b' : '#10b981')}
+                ${renderAttSummaryItem('💸 รวมหัก', att.totalDeduction + ' บาท', att.totalDeduction > 0 ? '#ef4444' : '#10b981')}
+            </div>
+        </div>` : `<div style="margin-top:12px;padding:10px 14px;background:#f9fafb;border-radius:8px;font-size:13px;color:#9ca3af;border:1px dashed #e5e7eb;">ยังไม่มีสรุปเวลาทำงาน — กด "ดึงสรุปเวลาทำงาน" เพื่อโหลด</div>`}
+
+        <!-- Behavior Logs -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;" class="bonus-behavior-grid">
+            <!-- Good behavior -->
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;">
+                <div style="font-size:13px;font-weight:600;color:#15803d;margin-bottom:10px;">✅ พฤติกรรมที่ดี (${goodLogs.length})</div>
+                <div id="goodLogs_${rec.id}">
+                    ${goodLogs.length === 0 ? '<div style="font-size:12px;color:#9ca3af;font-style:italic;">ยังไม่มีบันทึก</div>' : goodLogs.map(l => renderBehaviorRow(l, rec.id)).join('')}
+                </div>
+                <button onclick="showAddBehaviorForm('${rec.id}','good')" style="margin-top:10px;font-size:12px;padding:5px 12px;border:1px dashed #16a34a;background:white;color:#15803d;border-radius:6px;cursor:pointer;width:100%;">+ เพิ่มพฤติกรรมดี</button>
+            </div>
+            <!-- Bad behavior -->
+            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px;">
+                <div style="font-size:13px;font-weight:600;color:#c2410c;margin-bottom:10px;">⚠️ พฤติกรรมที่ต้องปรับปรุง (${badLogs.length})</div>
+                <div id="badLogs_${rec.id}">
+                    ${badLogs.length === 0 ? '<div style="font-size:12px;color:#9ca3af;font-style:italic;">ยังไม่มีบันทึก</div>' : badLogs.map(l => renderBehaviorRow(l, rec.id)).join('')}
+                </div>
+                <button onclick="showAddBehaviorForm('${rec.id}','bad')" style="margin-top:10px;font-size:12px;padding:5px 12px;border:1px dashed #ea580c;background:white;color:#c2410c;border-radius:6px;cursor:pointer;width:100%;">+ เพิ่มพฤติกรรมที่ต้องปรับปรุง</button>
+            </div>
+        </div>
+        <div id="behaviorForm_${rec.id}" style="display:none;"></div>
+
+        <!-- Bonus Decision -->
+        <div style="margin-top:16px;padding:14px 16px;background:var(--bg-surface2);border-radius:10px;border:1px solid var(--input-border);">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">💰 การพิจารณาโบนัส</div>
+            <div style="display:grid;grid-template-columns:auto auto 1fr;gap:12px;align-items:center;flex-wrap:wrap;" class="bonus-form-grid">
+                <div>
+                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">จำนวนโบนัส (บาท)</label>
+                    <input type="number" id="bonusAmt_${rec.id}" value="${rec.bonusAmount || 0}" min="0" class="input-field" style="width:150px;" placeholder="0">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">สถานะ</label>
+                    <select id="bonusSt_${rec.id}" class="input-field" style="width:140px;">
+                        <option value="pending"  ${rec.bonusStatus==='pending'  ? 'selected':''}>🟡 รอพิจารณา</option>
+                        <option value="approved" ${rec.bonusStatus==='approved' ? 'selected':''}>🟢 อนุมัติแล้ว</option>
+                        <option value="rejected" ${rec.bonusStatus==='rejected' ? 'selected':''}>🔴 ไม่อนุมัติ</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">สรุปการพิจารณา</label>
+                    <input type="text" id="bonusSum_${rec.id}" value="${escHtml(rec.summary||'')}" placeholder="สรุปเหตุผลการพิจารณา..." class="input-field" style="width:100%;">
+                </div>
+            </div>
+            <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+                <button class="btn-primary" onclick="saveBonusRecord('${rec.id}')">💾 บันทึกการพิจารณา</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderAttSummaryItem(label, value, color) {
+    return `<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;border:1px solid #e0f2fe;">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">${label}</div>
+        <div style="font-size:14px;font-weight:700;color:${color};">${value}</div>
+    </div>`;
+}
+
+function renderBehaviorRow(log, recId) {
+    return `<div id="blogRow_${log.id}" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;padding:6px 8px;background:white;border-radius:6px;font-size:12px;">
+        <div style="flex:0 0 80px;color:#6b7280;">${log.date || ''}</div>
+        <div style="flex:1;color:var(--text-primary);">${escHtml(log.description)}</div>
+        <button onclick="deleteBehaviorLog('${log.id}','${recId}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:0 2px;" title="ลบ">✕</button>
+    </div>`;
+}
+
+function showAddBehaviorForm(recId, type) {
+    const formEl = document.getElementById(`behaviorForm_${recId}`);
+    const typeLabel = type === 'good' ? 'พฤติกรรมดี' : 'พฤติกรรมที่ต้องปรับปรุง';
+    const color = type === 'good' ? '#15803d' : '#c2410c';
+    const today = new Date().toISOString().slice(0, 10);
+    formEl.style.display = 'block';
+    formEl.innerHTML = `
+        <div style="margin-top:12px;padding:14px;background:${type==='good'?'#f0fdf4':'#fff7ed'};border:1px solid ${type==='good'?'#bbf7d0':'#fed7aa'};border-radius:10px;">
+            <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:10px;">+ เพิ่ม${typeLabel}</div>
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;">
+                <div>
+                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">วันที่</label>
+                    <input type="date" id="blogDate_${recId}" value="${today}" class="input-field" style="width:150px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">รายละเอียด</label>
+                    <input type="text" id="blogDesc_${recId}" placeholder="บันทึกรายละเอียด..." class="input-field" style="width:100%;">
+                </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+                <button onclick="document.getElementById('behaviorForm_${recId}').style.display='none'" style="font-size:12px;padding:5px 14px;border:1px solid #d1d5db;background:white;color:#6b7280;border-radius:6px;cursor:pointer;">ยกเลิก</button>
+                <button onclick="saveBehaviorLog('${recId}','${type}')" style="font-size:12px;padding:5px 14px;border:none;background:${type==='good'?'#16a34a':'#ea580c'};color:white;border-radius:6px;cursor:pointer;font-weight:600;">บันทึก</button>
+            </div>
+        </div>`;
+    document.getElementById(`blogDesc_${recId}`).focus();
+}
+
+async function saveBehaviorLog(recId, type) {
+    const date = document.getElementById(`blogDate_${recId}`).value;
+    const desc = document.getElementById(`blogDesc_${recId}`).value.trim();
+    if (!desc) { alert('กรุณากรอกรายละเอียด'); return; }
+    try {
+        const log = await api.addBehavior({ bonusRecordId: recId, type, date, description: desc });
+        document.getElementById(`behaviorForm_${recId}`).style.display = 'none';
+        const container = document.getElementById(`${type}Logs_${recId}`);
+        const placeholder = container.querySelector('div[style*="italic"]');
+        if (placeholder) placeholder.remove();
+        container.insertAdjacentHTML('beforeend', renderBehaviorRow(log, recId));
+        // Update count in header
+        const rec = bonusRecords.find(r => r.id === recId);
+        if (rec) {
+            if (!rec.behaviorLogs) rec.behaviorLogs = [];
+            rec.behaviorLogs.push(log);
+        }
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
+async function deleteBehaviorLog(logId, recId) {
+    if (!confirm('ลบรายการนี้?')) return;
+    try {
+        await api.deleteBehavior(logId);
+        const row = document.getElementById(`blogRow_${logId}`);
+        if (row) row.remove();
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
+async function loadBonusAttendance(recId, employeeId) {
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '⏳ กำลังดึงข้อมูล...';
+    try {
+        let workingDays = 0, holidays = 0, absent = 0;
+        let late1Minutes = 0, late1Baht = 0, late2Minutes = 0, late2Baht = 0, totalDeduction = 0;
+        for (let m = 1; m <= 12; m++) {
+            try {
+                const records = await api.getAttendance({ shopId: DEFAULT_SHOP_ID, month: m, year: bonusYear });
+                const empRec = records.find(r => r.employeeId === employeeId);
+                if (empRec) {
+                    workingDays   += empRec.workingDays    || 0;
+                    holidays      += empRec.holidays       || 0;
+                    absent        += empRec.absent         || 0;
+                    totalDeduction += empRec.totalDeduction || 0;
+                    late1Baht     += empRec.totalLate1Baht || 0;
+                    late2Baht     += empRec.totalLate2Baht || 0;
+                    if (empRec.days) {
+                        for (const d of empRec.days) {
+                            late1Minutes += d.late1Minutes || 0;
+                            late2Minutes += d.late2Minutes || 0;
+                        }
+                    }
+                }
+            } catch {}
+        }
+        const summary = { workingDays, holidays, absent, late1Minutes, late1Baht, late2Minutes, late2Baht, totalDeduction };
+        await api.updateBonusRecord(recId, { attendanceSummary: summary });
+        const rec = bonusRecords.find(r => r.id === recId);
+        if (rec) rec.attendanceSummary = summary;
+        renderBonusContent();
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+    btn.disabled = false; btn.textContent = '📊 ดึงสรุปเวลาทำงาน';
+}
+
+async function saveBonusRecord(recId) {
+    const amount = parseFloat(document.getElementById(`bonusAmt_${recId}`).value) || 0;
+    const status  = document.getElementById(`bonusSt_${recId}`).value;
+    const summary = document.getElementById(`bonusSum_${recId}`).value.trim();
+    try {
+        await api.updateBonusRecord(recId, { bonusAmount: amount, bonusStatus: status, summary });
+        const rec = bonusRecords.find(r => r.id === recId);
+        if (rec) { rec.bonusAmount = amount; rec.bonusStatus = status; rec.summary = summary; }
+        // Update status badge
+        renderBonusContent();
+        // Scroll to card
+        setTimeout(() => { const el = document.getElementById(`bonusCard_${recId}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+        showBonusToast('✅ บันทึกสำเร็จ!');
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
+function showBonusToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e3a5f;color:white;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
+
+async function uploadBonusPhoto(recId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('ไฟล์ใหญ่เกิน 2MB กรุณาเลือกรูปขนาดเล็กกว่า'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const original = e.target.result;
+        const base64 = await resizeImageBase64(original, 300, 300);
+        try {
+            await api.updateBonusRecord(recId, { photo: base64 });
+            const wrap = document.getElementById(`photoWrap_${recId}`);
+            if (wrap) wrap.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;">`;
+            showBonusToast('✅ อัปโหลดรูปสำเร็จ!');
+        } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+    };
+    reader.readAsDataURL(file);
+}
+
+function resizeImageBase64(dataUrl, maxW, maxH) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxW || h > maxH) {
+                const ratio = Math.min(maxW / w, maxH / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = dataUrl;
+    });
 }
 
 // ============================================
