@@ -1270,6 +1270,8 @@ async function saveSettings() {
 let bonusYear = new Date().getFullYear();
 let bonusRecords = [];
 let bonusEmployees = [];
+let bonusSearch = '';
+let bonusSort = 'asc';
 
 async function renderBonus(container) {
     bonusYear = new Date().getFullYear();
@@ -1279,14 +1281,24 @@ async function renderBonus(container) {
                 <h1 class="text-2xl font-bold text-gray-800">🏆 โบนัสประจำปี</h1>
                 <p class="text-gray-500 text-sm mt-1">ประเมินผลงานและพิจารณาโบนัสพนักงาน</p>
             </div>
-            <div class="card mb-6" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                <div>
-                    <label class="text-sm text-gray-600" style="display:block;margin-bottom:4px;">ปี (ค.ศ.)</label>
-                    <input type="number" id="bonusYear" class="input-field" value="${bonusYear}" min="2020" max="2035" style="width:120px;" onchange="bonusYear=parseInt(this.value)">
-                </div>
-                <div style="margin-top:20px;">
-                    <button class="btn-primary" onclick="loadBonusPage()">🔄 โหลดข้อมูล</button>
-                    <button class="btn-success" onclick="initBonusAllEmployees()" style="margin-left:8px;">➕ เพิ่มพนักงานทั้งหมด</button>
+            <div class="card mb-6">
+                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <label class="text-sm text-gray-600" style="display:block;margin-bottom:4px;">ปี (ค.ศ.)</label>
+                        <input type="number" id="bonusYear" class="input-field" value="${bonusYear}" min="2020" max="2035" style="width:120px;" onchange="bonusYear=parseInt(this.value)">
+                    </div>
+                    <div style="flex:1;min-width:200px;">
+                        <label class="text-sm text-gray-600" style="display:block;margin-bottom:4px;">ค้นหาพนักงาน</label>
+                        <input type="text" id="bonusSearchInput" class="input-field" placeholder="🔍 ชื่อ หรือ รหัสพนักงาน..." value="${bonusSearch}" oninput="bonusSearch=this.value;renderBonusContent()" style="width:100%;">
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:flex-end;">
+                        <button id="bonusSortAsc" onclick="setBonusSort('asc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort==='asc'?'#3b82f6':'#d1d5db'};background:${bonusSort==='asc'?'#eff6ff':'white'};color:${bonusSort==='asc'?'#2563eb':'#374151'};font-weight:${bonusSort==='asc'?'600':'400'};">A→Z</button>
+                        <button id="bonusSortDesc" onclick="setBonusSort('desc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort==='desc'?'#3b82f6':'#d1d5db'};background:${bonusSort==='desc'?'#eff6ff':'white'};color:${bonusSort==='desc'?'#2563eb':'#374151'};font-weight:${bonusSort==='desc'?'600':'400'};">Z→A</button>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-primary" onclick="loadBonusPage()">🔄 โหลดข้อมูล</button>
+                        <button class="btn-success" onclick="initBonusAllEmployees()">➕ เพิ่มพนักงานทั้งหมด</button>
+                    </div>
                 </div>
             </div>
             <div id="bonusContent">
@@ -1328,6 +1340,26 @@ async function initBonusAllEmployees() {
     btn.disabled = false; btn.textContent = '➕ เพิ่มพนักงานทั้งหมด';
 }
 
+function setBonusSort(dir) {
+    bonusSort = dir;
+    // Update button styles
+    const asc  = document.getElementById('bonusSortAsc');
+    const desc = document.getElementById('bonusSortDesc');
+    if (asc) {
+        asc.style.border      = dir === 'asc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
+        asc.style.background  = dir === 'asc' ? '#eff6ff' : 'white';
+        asc.style.color       = dir === 'asc' ? '#2563eb' : '#374151';
+        asc.style.fontWeight  = dir === 'asc' ? '600' : '400';
+    }
+    if (desc) {
+        desc.style.border     = dir === 'desc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
+        desc.style.background = dir === 'desc' ? '#eff6ff' : 'white';
+        desc.style.color      = dir === 'desc' ? '#2563eb' : '#374151';
+        desc.style.fontWeight = dir === 'desc' ? '600' : '400';
+    }
+    renderBonusContent();
+}
+
 function renderBonusContent() {
     const content = document.getElementById('bonusContent');
     if (bonusRecords.length === 0) {
@@ -1338,7 +1370,22 @@ function renderBonusContent() {
         </div>`;
         return;
     }
-    content.innerHTML = bonusRecords.map((rec, idx) => renderBonusCard(rec, idx)).join('');
+    const q = bonusSearch.trim().toLowerCase();
+    let filtered = q
+        ? bonusRecords.filter(r => r.empName.toLowerCase().includes(q) || r.empCode.toLowerCase().includes(q))
+        : [...bonusRecords];
+    filtered.sort((a, b) => {
+        const cmp = a.empName.localeCompare(b.empName, 'th');
+        return bonusSort === 'asc' ? cmp : -cmp;
+    });
+    if (filtered.length === 0) {
+        content.innerHTML = `<div class="card" style="text-align:center;padding:48px;color:#9ca3af;">
+            <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+            <p>ไม่พบพนักงานที่ค้นหา "${escHtml(q)}"</p>
+        </div>`;
+        return;
+    }
+    content.innerHTML = filtered.map((rec, idx) => renderBonusCard(rec, idx)).join('');
 }
 
 function renderBonusCard(rec, idx) {
