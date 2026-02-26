@@ -219,6 +219,81 @@ async function renderDashboard(container) {
 }
 
 // ============================================
+// MERGE MANUAL EDITS
+// Preserve admin-edited days (scan times, waive, note, isHoliday)
+// when re-importing or reprocessing attendance
+// ============================================
+function mergeManualEdits(newAttendance, existingAttendance) {
+    if (!existingAttendance || !existingAttendance.days) return;
+
+    const existingByDate = new Map(existingAttendance.days.map(d => [d.date, d]));
+
+    for (const newDay of newAttendance.days) {
+        const old = existingByDate.get(newDay.date);
+        if (!old || !old.manualEdit) continue;
+
+        // Preserve all admin-edited fields
+        newDay.scan1 = old.scan1;
+        newDay.scan2 = old.scan2;
+        newDay.scan3 = old.scan3;
+        newDay.scan4 = old.scan4;
+        newDay.isHoliday = old.isHoliday;
+        newDay.waiveLate1 = old.waiveLate1 || false;
+        newDay.waiveLate2 = old.waiveLate2 || false;
+        newDay.note = old.note || '';
+        newDay.manualEdit = true;
+
+        // Recalculate lateness from preserved scan times
+        const config = newAttendance.shiftConfig;
+        const deductRate = config.deductionPerMinute || 1;
+        if (newDay.isHoliday) {
+            newDay.late1Minutes = 0; newDay.late1Baht = 0;
+            newDay.late2Minutes = 0; newDay.late2Baht = 0;
+            newDay.isAbsent = false;
+        } else {
+            const late1 = calculateLateness(newDay.scan1, config.shift1Deadline, deductRate);
+            newDay.late1Minutes = late1.minutes;
+            newDay.late1Baht = late1.baht;
+
+            let late2 = { minutes: 0, baht: 0 };
+            if (newDay.scan2) {
+                const outMin = timeToMinutes(newDay.scan2);
+                const calcDeadline = outMin + (config.breakDurationMinutes || 90);
+                let fixedDL;
+                if (outMin < timeToMinutes('13:15')) fixedDL = timeToMinutes('14:30');
+                else if (outMin < timeToMinutes('14:00')) fixedDL = timeToMinutes('15:00');
+                else if (outMin < timeToMinutes('14:45')) fixedDL = timeToMinutes('16:00');
+                else fixedDL = timeToMinutes('16:30');
+                const deadlineMin = Math.max(calcDeadline, fixedDL);
+                const h = Math.floor(deadlineMin / 60);
+                const m = deadlineMin % 60;
+                const breakDL = h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0');
+                late2 = calculateLateness(newDay.scan3, breakDL, deductRate);
+            }
+            newDay.late2Minutes = late2.minutes;
+            newDay.late2Baht = late2.baht;
+            newDay.isAbsent = !newDay.scan1 && !newDay.scan2 && !newDay.scan3 && !newDay.scan4;
+        }
+    }
+
+    // Recalculate totals after merge
+    let holidays = 0, absent = 0, workingDays = 0, totalLate1 = 0, totalLate2 = 0;
+    for (const d of newAttendance.days) {
+        if (d.isHoliday) holidays++;
+        else if (d.isAbsent) absent++;
+        else workingDays++;
+        if (!d.waiveLate1) totalLate1 += d.late1Baht;
+        if (!d.waiveLate2) totalLate2 += d.late2Baht;
+    }
+    newAttendance.holidays = holidays;
+    newAttendance.absent = absent;
+    newAttendance.workingDays = workingDays;
+    newAttendance.totalLate1Baht = totalLate1;
+    newAttendance.totalLate2Baht = totalLate2;
+    newAttendance.totalDeduction = totalLate1 + totalLate2;
+}
+
+// ============================================
 // IMPORT
 // ============================================
 let importParsedData = null;
@@ -381,6 +456,10 @@ async function processImport() {
             scansByEmp.get(scan.empCode).push(scan);
         }
 
+        // Load existing attendance to preserve manual edits
+        const existingAtt = await api.getAttendance({ shopId, month, year });
+        const existingByEmp = new Map(existingAtt.map(a => [a.empCode, a]));
+
         // Process each employee using ALL merged scans
         let processedCount = 0;
         for (const [empCode, empScans] of scansByEmp) {
@@ -390,6 +469,7 @@ async function processImport() {
             if (empScans.length === 0) continue;
 
             const attendance = processEmployeeAttendance(employee, empScans, shopName, month, year);
+            mergeManualEdits(attendance, existingByEmp.get(empCode));
             await api.saveAttendance(attendance);
             processedCount++;
         }
@@ -513,6 +593,10 @@ async function reprocessAttendance() {
             scansByEmp.get(scan.empCode).push(scan);
         }
 
+        statusEl.textContent = 'กำลังโหลดข้อมูลที่บันทึกไว้...';
+        const existingAtt = await api.getAttendance({ shopId, month, year });
+        const existingByEmp = new Map(existingAtt.map(a => [a.empCode, a]));
+
         let processedCount = 0;
         const totalEmp = scansByEmp.size;
         for (const [empCode, empScans] of scansByEmp) {
@@ -521,6 +605,7 @@ async function reprocessAttendance() {
             processedCount++;
             statusEl.textContent = `กำลังประมวลผล ${processedCount}/${totalEmp} คน...`;
             const attendance = processEmployeeAttendance(employee, empScans, shopName, month, year);
+            mergeManualEdits(attendance, existingByEmp.get(empCode));
             await api.saveAttendance(attendance);
         }
 
@@ -642,7 +727,7 @@ function renderAttDetail(record, rIdx) {
                             const breakDeadline = day.breakRound || '';
                             const scanCount = [day.scan1, day.scan2, day.scan3, day.scan4].filter(s => s && s.trim() !== '').length;
                             const hasEmptyScan = !day.isHoliday && scanCount > 0 && scanCount < 4;
-                            const emptyCellStyle = 'background:#fff3e0;';
+                            const emptyCellStyle = 'background:#ffebee;';
                             const s1empty = !day.isHoliday && !day.scan1;
                             const s2empty = !day.isHoliday && !day.scan2;
                             const s3empty = !day.isHoliday && !day.scan3;
@@ -664,7 +749,7 @@ function renderAttDetail(record, rIdx) {
                                 <td style="${day.waiveLate2 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late2Minutes > 0 ? minutesToTime(day.late2Minutes) : ''}</td>
                                 <td class="text-red-600" style="${day.waiveLate2 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late2Baht > 0 ? day.late2Baht : 0}</td>
                                 <td>${day.isHoliday ? '' : ((day.late1Baht > 0 || day.late2Baht > 0 || day.waiveLate1 || day.waiveLate2) ? '<div style="display:flex;gap:2px;justify-content:center;">' + (day.late1Baht > 0 || day.waiveLate1 ? '<button onclick="toggleWaive('+rIdx+','+idx+',1)" title="'+(day.waiveLate1?'ยกเลิกยกเว้นเข้าสาย':'ยกเว้นเข้าสาย')+'" style="font-size:10px;padding:2px 6px;border:1px solid '+(day.waiveLate1?'#059669':'#f59e0b')+';background:'+(day.waiveLate1?'#ecfdf5':'#fffbeb')+';color:'+(day.waiveLate1?'#059669':'#d97706')+';border-radius:4px;cursor:pointer;white-space:nowrap;">'+(day.waiveLate1?'&#10003; เข้า':'เข้า')+'</button>' : '') + (day.late2Baht > 0 || day.waiveLate2 ? '<button onclick="toggleWaive('+rIdx+','+idx+',2)" title="'+(day.waiveLate2?'ยกเลิกยกเว้นพักสาย':'ยกเว้นพักสาย')+'" style="font-size:10px;padding:2px 6px;border:1px solid '+(day.waiveLate2?'#059669':'#f59e0b')+';background:'+(day.waiveLate2?'#ecfdf5':'#fffbeb')+';color:'+(day.waiveLate2?'#059669':'#d97706')+';border-radius:4px;cursor:pointer;white-space:nowrap;">'+(day.waiveLate2?'&#10003; พัก':'พัก')+'</button>' : '') + '</div>' : '')}</td>
-                                <td style="min-width:120px;"><input type="text" class="note-input" value="${escHtml(day.note||'')}" placeholder="หมายเหตุ..." onchange="updateNote(${rIdx},${idx},this.value)" style="width:100%;padding:2px 6px;border:1px solid var(--input-border);border-radius:4px;font-size:11px;font-family:inherit;background:var(--input-bg);color:var(--text-primary);outline:none;"></td>
+                                <td style="min-width:120px;${day.note ? 'background:#fffde7;' : ''}"><input type="text" class="note-input" value="${escHtml(day.note||'')}" placeholder="หมายเหตุ..." onchange="updateNote(${rIdx},${idx},this.value)" style="width:100%;padding:2px 6px;border:1px solid ${day.note ? '#f59e0b' : 'var(--input-border)'};border-radius:4px;font-size:11px;font-family:inherit;background:${day.note ? '#fffde7' : 'var(--input-bg)'};color:${day.note ? '#92400e' : 'var(--text-primary)'};outline:none;font-weight:${day.note ? '600' : 'normal'};"></td>
                             </tr>`;
                         }).join('')}
                     </tbody>
@@ -691,6 +776,7 @@ function toggleHoliday(rIdx, dayIdx) {
     const record = attendanceRecords[rIdx];
     const day = record.days[dayIdx];
     day.isHoliday = !day.isHoliday;
+    day.manualEdit = true;
     if (day.isHoliday) {
         day.scan1 = null; day.scan2 = null; day.scan3 = null; day.scan4 = null;
         day.isAbsent = false;
@@ -710,6 +796,7 @@ function updateScanTime(rIdx, dayIdx, scanNum, value) {
 
     // Update the scan value
     day['scan' + scanNum] = value || null;
+    day.manualEdit = true;
 
     // Recalculate break deadline per round: A=14:30, B=15:00, C=16:00, D=16:30
     // If scan2+1.5hrs exceeds fixed DL, use calculated value
@@ -784,6 +871,7 @@ function toggleWaive(rIdx, dayIdx, type) {
     const day = record.days[dayIdx];
     if (type === 1) day.waiveLate1 = !day.waiveLate1;
     if (type === 2) day.waiveLate2 = !day.waiveLate2;
+    day.manualEdit = true;
     recalcRecordTotals(record);
     renderAttList();
 }
@@ -792,6 +880,7 @@ function updateNote(rIdx, dayIdx, value) {
     const record = attendanceRecords[rIdx];
     const day = record.days[dayIdx];
     day.note = value.trim();
+    day.manualEdit = true;
 }
 
 async function saveAttRecord(rIdx) {
