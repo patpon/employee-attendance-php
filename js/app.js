@@ -689,6 +689,7 @@ function renderAttList() {
                     <div class="flex gap-1" style="margin-left:8px;" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="editEmployeeName('${record.employeeId}','${escHtml(record.empName)}')" title="แก้ไขชื่อ" style="font-size:14px;padding:4px 6px;">&#9998;</button>
                         <button class="btn-icon" onclick="deleteEmployee('${record.employeeId}','${escHtml(record.empName)}')" title="ลบพนักงาน" style="font-size:14px;padding:4px 6px;color:#ef4444;">&#128465;</button>
+                        <button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="สถานะพนักงาน" id="activeBtn_${record.employeeId}" style="font-size:11px;padding:3px 7px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;">&#128100; สถานะ</button>
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
@@ -939,6 +940,20 @@ async function deleteEmployee(employeeId, empName) {
         attendanceRecords = attendanceRecords.filter(r => r.employeeId !== employeeId);
         renderAttList();
         alert('ลบพนักงานสำเร็จ!');
+    } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+}
+
+async function toggleEmployeeActive(employeeId, empName) {
+    try {
+        const emps = await api.getEmployees();
+        const emp = emps.find(e => e.id === employeeId);
+        if (!emp) { alert('ไม่พบพนักงาน'); return; }
+        const currentActive = emp.isActive !== 0;
+        const newActive = currentActive ? 0 : 1;
+        const actionLabel = currentActive ? 'ลาออก' : 'กลับมาทำงาน';
+        if (!confirm(`ต้องการตั้งสถานะ "${empName}" เป็น ${currentActive ? '❗ ลาออก' : '✅ ยังทำงานอยู่'} ใช่ไหม?`)) return;
+        await api.updateEmployee(employeeId, { ...emp, isActive: newActive });
+        alert(`ตั้งสถานะ "${empName}" เป็น ${newActive === 1 ? '✅ ยังทำงานอยู่' : '❗ ลาออก'} เรียบร้อยแล้ว`);
     } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
 }
 
@@ -1325,8 +1340,8 @@ async function loadBonusPage() {
 
 async function initBonusAllEmployees() {
     bonusYear = parseInt(document.getElementById('bonusYear').value);
-    const shopEmps = bonusEmployees.filter(e => e.shopId === DEFAULT_SHOP_ID);
-    if (shopEmps.length === 0) { alert('ไม่พบพนักงาน'); return; }
+    const shopEmps = bonusEmployees.filter(e => e.shopId === DEFAULT_SHOP_ID && e.isActive !== 0);
+    if (shopEmps.length === 0) { alert('ไม่พบพนักงานที่ยังทำงานอยู่'); return; }
 
     const btn = event.target;
     btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...';

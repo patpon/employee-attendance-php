@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `employees` (
   `shopId`      VARCHAR(30)  NOT NULL,
   `shiftConfig` JSON         NOT NULL,
   `holidays`    JSON         NOT NULL,
+  `isActive`    TINYINT(1)   NOT NULL DEFAULT 1,
   `createdAt`   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updatedAt`   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
