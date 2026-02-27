@@ -693,8 +693,8 @@ function renderAttList() {
             ? ' <span style="background:#6b7280;color:white;font-size:11px;padding:2px 9px;border-radius:10px;margin-left:8px;font-weight:600;">&#10060; ลาออกแล้ว</span>'
             : '';
         const activeToggleBtn = isResigned
-            ? `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="กลับมาทำงาน" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #10b981;background:#ecfdf5;color:#059669;font-weight:600;">&#10003; กลับมาทำงาน</button>`
-            : `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="ตั้งเป็นลาออก" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;">&#128100; ยังทำงานอยู่</button>`;
+            ? `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="คลิกเพื่อกลับมาทำงาน" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #9ca3af;background:#f3f4f6;color:#6b7280;">&#128100; ลาออกแล้ว</button>`
+            : `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="คลิกเพื่อตั้งเป็นลาออก" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #10b981;background:#ecfdf5;color:#059669;font-weight:600;">&#10003; ยังทำงานอยู่</button>`;
         return `
         <div class="card card-no-pad overflow-hidden" style="${cardBorder}">
             <div class="accordion-header" onclick="toggleAttRecord('${record.id}')" style="${headerBg}">
