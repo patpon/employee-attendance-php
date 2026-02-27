@@ -544,7 +544,16 @@ async function loadAttendance() {
     const month = parseInt(document.getElementById('attMonth').value);
     const year = parseInt(document.getElementById('attYear').value);
     try {
-        attendanceRecords = await api.getAttendance({ shopId: DEFAULT_SHOP_ID, month, year });
+        const [records, emps] = await Promise.all([
+            api.getAttendance({ shopId: DEFAULT_SHOP_ID, month, year }),
+            api.getEmployees(),
+        ]);
+        const empMap = {};
+        emps.forEach(e => { empMap[e.id] = e; });
+        attendanceRecords = records.map(r => ({
+            ...r,
+            isActive: empMap[r.employeeId] ? empMap[r.employeeId].isActive : 1,
+        }));
     } catch { attendanceRecords = []; }
     expandedAttId = null;
     renderAttList();
@@ -675,21 +684,32 @@ function renderAttList() {
     el.innerHTML = '<div class="space-y-4">' + displayRecords.map(record => {
         const rIdx = attendanceRecords.indexOf(record);
         const highDeduct = record.totalDeduction >= 60;
+        const isResigned = record.isActive === 0;
+        const cardBorder = isResigned ? 'border-left:4px solid #9ca3af;opacity:0.75;' : (highDeduct ? 'border-left:4px solid #ef4444;' : '');
+        const headerBg = isResigned ? 'background:#f3f4f6;' : (highDeduct ? 'background:#fef2f2;' : '');
+        const avatarBg = isResigned ? '#e5e7eb' : (highDeduct ? '#fee2e2' : '#dbeafe');
+        const avatarColor = isResigned ? '#9ca3af' : (highDeduct ? '#dc2626' : '#1d4ed8');
+        const resignedBadge = isResigned
+            ? ' <span style="background:#6b7280;color:white;font-size:11px;padding:2px 9px;border-radius:10px;margin-left:8px;font-weight:600;">&#10060; ลาออกแล้ว</span>'
+            : '';
+        const activeToggleBtn = isResigned
+            ? `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="กลับมาทำงาน" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #10b981;background:#ecfdf5;color:#059669;font-weight:600;">&#10003; กลับมาทำงาน</button>`
+            : `<button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="ตั้งเป็นลาออก" style="font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;">&#128100; ยังทำงานอยู่</button>`;
         return `
-        <div class="card card-no-pad overflow-hidden" style="${highDeduct ? 'border-left:4px solid #ef4444;' : ''}">
-            <div class="accordion-header" onclick="toggleAttRecord('${record.id}')" style="${highDeduct ? 'background:#fef2f2;' : ''}">
+        <div class="card card-no-pad overflow-hidden" style="${cardBorder}">
+            <div class="accordion-header" onclick="toggleAttRecord('${record.id}')" style="${headerBg}">
                 <div class="flex items-center gap-4">
-                    <div style="width:40px;height:40px;background:${highDeduct ? '#fee2e2' : '#dbeafe'};border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                        <span style="color:${highDeduct ? '#dc2626' : '#1d4ed8'};font-weight:700;font-size:14px;">${escHtml(record.empCode)}</span>
+                    <div style="width:40px;height:40px;background:${avatarBg};border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                        <span style="color:${avatarColor};font-weight:700;font-size:14px;">${escHtml(record.empCode)}</span>
                     </div>
                     <div>
-                        <p class="font-semibold text-gray-800" style="font-size:16px;">${escHtml(record.empName)}${highDeduct ? ' <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;">&#9888; หักเกิน 60</span>' : ''}</p>
+                        <p class="font-semibold" style="font-size:16px;color:${isResigned ? '#9ca3af' : '#1f2937'};">${escHtml(record.empName)}${resignedBadge}${!isResigned && highDeduct ? ' <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;">&#9888; หักเกิน 60</span>' : ''}</p>
                         <p style="font-size:12px;color:#6b7280;margin-top:2px;">${escHtml(record.shopName)} | ${THAI_MONTHS[record.month - 1]} ${record.year}</p>
                     </div>
                     <div class="flex gap-1" style="margin-left:8px;" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="editEmployeeName('${record.employeeId}','${escHtml(record.empName)}')" title="แก้ไขชื่อ" style="font-size:14px;padding:4px 6px;">&#9998;</button>
                         <button class="btn-icon" onclick="deleteEmployee('${record.employeeId}','${escHtml(record.empName)}')" title="ลบพนักงาน" style="font-size:14px;padding:4px 6px;color:#ef4444;">&#128465;</button>
-                        <button class="btn-icon" onclick="toggleEmployeeActive('${record.employeeId}','${escHtml(record.empName)}')" title="สถานะพนักงาน" id="activeBtn_${record.employeeId}" style="font-size:11px;padding:3px 7px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;">&#128100; สถานะ</button>
+                        ${activeToggleBtn}
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
@@ -950,10 +970,12 @@ async function toggleEmployeeActive(employeeId, empName) {
         if (!emp) { alert('ไม่พบพนักงาน'); return; }
         const currentActive = emp.isActive !== 0;
         const newActive = currentActive ? 0 : 1;
-        const actionLabel = currentActive ? 'ลาออก' : 'กลับมาทำงาน';
         if (!confirm(`ต้องการตั้งสถานะ "${empName}" เป็น ${currentActive ? '❗ ลาออก' : '✅ ยังทำงานอยู่'} ใช่ไหม?`)) return;
         await api.updateEmployee(employeeId, { ...emp, isActive: newActive });
-        alert(`ตั้งสถานะ "${empName}" เป็น ${newActive === 1 ? '✅ ยังทำงานอยู่' : '❗ ลาออก'} เรียบร้อยแล้ว`);
+        attendanceRecords = attendanceRecords.map(r =>
+            r.employeeId === employeeId ? { ...r, isActive: newActive } : r
+        );
+        renderAttList();
     } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
 }
 
