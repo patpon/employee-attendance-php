@@ -33,7 +33,7 @@ let currentUser = { username: '', displayName: '', role: 'viewer' };
 
 // Role-based menu permissions
 const ROLE_PERMISSIONS = {
-    admin:    ['dashboard', 'import', 'attendance', 'reports', 'bonus', 'settings'],
+    admin: ['dashboard', 'import', 'attendance', 'reports', 'bonus', 'settings'],
     importer: ['import'],
 };
 
@@ -83,7 +83,7 @@ function applyRoleToSidebar() {
     try {
         const shop = await api.getShop(DEFAULT_SHOP_ID);
         if (shop && shop.name) DEFAULT_SHOP_NAME = shop.name;
-    } catch {}
+    } catch { }
     applyRoleToSidebar();
     navigateTo('dashboard');
 })();
@@ -216,7 +216,7 @@ async function renderDashboard(container) {
         document.getElementById('statEmployees').textContent = employees.length;
         document.getElementById('statAttendance').textContent = attendance.length;
         document.getElementById('statImports').textContent = imports.length;
-    } catch {}
+    } catch { }
 }
 
 // ============================================
@@ -383,7 +383,7 @@ function showImportStatus(type, message) {
 async function showImportPreview() {
     if (!importParsedData) return;
     let currentEmployees = [];
-    try { currentEmployees = await api.getEmployees(); } catch {}
+    try { currentEmployees = await api.getEmployees(); } catch { }
 
     const el = document.getElementById('importPreview');
     el.classList.remove('hidden');
@@ -395,15 +395,15 @@ async function showImportPreview() {
                     <thead><tr style="background:#f9fafb;"><th style="padding:8px 12px;text-align:left;">รหัส</th><th style="padding:8px 12px;text-align:left;">ชื่อ</th><th style="padding:8px 12px;text-align:center;">จำนวน scan</th><th style="padding:8px 12px;text-align:center;">สถานะ</th></tr></thead>
                     <tbody>
                         ${importParsedData.employees.map(emp => {
-                            const scanCount = importDedupedScans.filter(s => s.empCode === emp.code).length;
-                            const existing = currentEmployees.find(e => e.empCode === emp.code && e.shopId === DEFAULT_SHOP_ID);
-                            return `<tr style="border-top:1px solid #f3f4f6;">
+        const scanCount = importDedupedScans.filter(s => s.empCode === emp.code).length;
+        const existing = currentEmployees.find(e => e.empCode === emp.code && e.shopId === DEFAULT_SHOP_ID);
+        return `<tr style="border-top:1px solid #f3f4f6;">
                                 <td style="padding:8px 12px;" class="font-mono">${escHtml(emp.code)}</td>
                                 <td style="padding:8px 12px;">${escHtml(emp.name)}</td>
                                 <td style="padding:8px 12px;text-align:center;">${scanCount}</td>
                                 <td style="padding:8px 12px;text-align:center;">${existing ? '<span class="badge badge-green">มีในระบบ</span>' : '<span class="badge badge-amber">จะสร้างใหม่</span>'}</td>
                             </tr>`;
-                        }).join('')}
+    }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -722,7 +722,8 @@ function renderAttList() {
             </div>
             ${expandedAttId === record.id ? renderAttDetail(record, rIdx) : ''}
         </div>
-    `; }).join('') + '</div>';
+    `;
+    }).join('') + '</div>';
 }
 
 function toggleAttRecord(id) {
@@ -746,34 +747,34 @@ function renderAttDetail(record, rIdx) {
                     </tr></thead>
                     <tbody>
                         ${record.days.map((day, idx) => {
-                            const breakDeadline = day.breakRound || '';
-                            const scanCount = [day.scan1, day.scan2, day.scan3, day.scan4].filter(s => s && s.trim() !== '').length;
-                            const hasEmptyScan = !day.isHoliday && scanCount > 0 && scanCount < 4;
-                            const emptyCellStyle = 'background:#ffebee;';
-                            const s1empty = !day.isHoliday && !day.scan1;
-                            const s2empty = !day.isHoliday && !day.scan2;
-                            const s3empty = !day.isHoliday && !day.scan3;
-                            const s4empty = !day.isHoliday && !day.scan4;
-                            const anyEmpty = s1empty || s2empty || s3empty || s4empty;
-                            return `
+        const breakDeadline = day.breakRound || '';
+        const scanCount = [day.scan1, day.scan2, day.scan3, day.scan4].filter(s => s && s.trim() !== '').length;
+        const hasEmptyScan = !day.isHoliday && scanCount > 0 && scanCount < 4;
+        const emptyCellStyle = 'background:#ffebee;';
+        const s1empty = !day.isHoliday && !day.scan1;
+        const s2empty = !day.isHoliday && !day.scan2;
+        const s3empty = !day.isHoliday && !day.scan3;
+        const s4empty = !day.isHoliday && !day.scan4;
+        const anyEmpty = s1empty || s2empty || s3empty || s4empty;
+        return `
                             <tr class="${day.isHoliday ? 'holiday' : day.isAbsent ? 'absent' : ''}">
                                 <td style="color:#9ca3af;">${idx + 1}</td>
                                 <td>${formatDate(day.date)}</td>
                                 <td>${day.dayOfWeek}</td>
                                 <td><input type="checkbox" ${day.isHoliday ? 'checked' : ''} onchange="toggleHoliday(${rIdx},${idx})"></td>
-                                <td style="${!day.isHoliday && s1empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="'+(day.scan1||'')+'" onchange="updateScanTime('+rIdx+','+idx+',1,this.value)">'}</td>
-                                <td style="${!day.isHoliday && s2empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="'+(day.scan2||'')+'" onchange="updateScanTime('+rIdx+','+idx+',2,this.value)">'}</td>
-                                <td style="${!day.isHoliday && s3empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="'+(day.scan3||'')+'" onchange="updateScanTime('+rIdx+','+idx+',3,this.value)">'}</td>
-                                <td style="${!day.isHoliday && s4empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="'+(day.scan4||'')+'" onchange="updateScanTime('+rIdx+','+idx+',4,this.value)">'}</td>
+                                <td style="${!day.isHoliday && s1empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="' + (day.scan1 || '') + '" onchange="updateScanTime(' + rIdx + ',' + idx + ',1,this.value)">'}</td>
+                                <td style="${!day.isHoliday && s2empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="' + (day.scan2 || '') + '" onchange="updateScanTime(' + rIdx + ',' + idx + ',2,this.value)">'}</td>
+                                <td style="${!day.isHoliday && s3empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="' + (day.scan3 || '') + '" onchange="updateScanTime(' + rIdx + ',' + idx + ',3,this.value)">'}</td>
+                                <td style="${!day.isHoliday && s4empty && anyEmpty ? emptyCellStyle : ''}">${day.isHoliday ? '-' : '<input type="time" class="time-input" value="' + (day.scan4 || '') + '" onchange="updateScanTime(' + rIdx + ',' + idx + ',4,this.value)">'}</td>
                                 <td style="${day.waiveLate1 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late1Minutes > 0 ? minutesToTime(day.late1Minutes) : ''}</td>
                                 <td class="text-red-600" style="${day.waiveLate1 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late1Baht > 0 ? day.late1Baht : 0}</td>
-                                <td class="text-center">${day.isHoliday ? '-' : (breakDeadline ? '<span class="badge badge-blue" style="font-size:10px;">'+breakDeadline+'</span>' : '')}</td>
+                                <td class="text-center">${day.isHoliday ? '-' : (breakDeadline ? '<span class="badge badge-blue" style="font-size:10px;">' + breakDeadline + '</span>' : '')}</td>
                                 <td style="${day.waiveLate2 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late2Minutes > 0 ? minutesToTime(day.late2Minutes) : ''}</td>
                                 <td class="text-red-600" style="${day.waiveLate2 ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${day.late2Baht > 0 ? day.late2Baht : 0}</td>
-                                <td>${day.isHoliday ? '' : ((day.late1Baht > 0 || day.late2Baht > 0 || day.waiveLate1 || day.waiveLate2) ? '<div style="display:flex;gap:2px;justify-content:center;">' + (day.late1Baht > 0 || day.waiveLate1 ? '<button onclick="toggleWaive('+rIdx+','+idx+',1)" title="'+(day.waiveLate1?'ยกเลิกยกเว้นเข้าสาย':'ยกเว้นเข้าสาย')+'" style="font-size:10px;padding:2px 6px;border:1px solid '+(day.waiveLate1?'#059669':'#f59e0b')+';background:'+(day.waiveLate1?'#ecfdf5':'#fffbeb')+';color:'+(day.waiveLate1?'#059669':'#d97706')+';border-radius:4px;cursor:pointer;white-space:nowrap;">'+(day.waiveLate1?'&#10003; เข้า':'เข้า')+'</button>' : '') + (day.late2Baht > 0 || day.waiveLate2 ? '<button onclick="toggleWaive('+rIdx+','+idx+',2)" title="'+(day.waiveLate2?'ยกเลิกยกเว้นพักสาย':'ยกเว้นพักสาย')+'" style="font-size:10px;padding:2px 6px;border:1px solid '+(day.waiveLate2?'#059669':'#f59e0b')+';background:'+(day.waiveLate2?'#ecfdf5':'#fffbeb')+';color:'+(day.waiveLate2?'#059669':'#d97706')+';border-radius:4px;cursor:pointer;white-space:nowrap;">'+(day.waiveLate2?'&#10003; พัก':'พัก')+'</button>' : '') + '</div>' : '')}</td>
-                                <td style="min-width:120px;${day.note ? 'background:#fffde7;' : ''}"><input type="text" class="note-input" value="${escHtml(day.note||'')}" placeholder="หมายเหตุ..." onchange="updateNote(${rIdx},${idx},this.value)" style="width:100%;padding:2px 6px;border:1px solid ${day.note ? '#f59e0b' : 'var(--input-border)'};border-radius:4px;font-size:11px;font-family:inherit;background:${day.note ? '#fffde7' : 'var(--input-bg)'};color:${day.note ? '#92400e' : 'var(--text-primary)'};outline:none;font-weight:${day.note ? '600' : 'normal'};"></td>
+                                <td>${day.isHoliday ? '' : ((day.late1Baht > 0 || day.late2Baht > 0 || day.waiveLate1 || day.waiveLate2) ? '<div style="display:flex;gap:2px;justify-content:center;">' + (day.late1Baht > 0 || day.waiveLate1 ? '<button onclick="toggleWaive(' + rIdx + ',' + idx + ',1)" title="' + (day.waiveLate1 ? 'ยกเลิกยกเว้นเข้าสาย' : 'ยกเว้นเข้าสาย') + '" style="font-size:10px;padding:2px 6px;border:1px solid ' + (day.waiveLate1 ? '#059669' : '#f59e0b') + ';background:' + (day.waiveLate1 ? '#ecfdf5' : '#fffbeb') + ';color:' + (day.waiveLate1 ? '#059669' : '#d97706') + ';border-radius:4px;cursor:pointer;white-space:nowrap;">' + (day.waiveLate1 ? '&#10003; เข้า' : 'เข้า') + '</button>' : '') + (day.late2Baht > 0 || day.waiveLate2 ? '<button onclick="toggleWaive(' + rIdx + ',' + idx + ',2)" title="' + (day.waiveLate2 ? 'ยกเลิกยกเว้นพักสาย' : 'ยกเว้นพักสาย') + '" style="font-size:10px;padding:2px 6px;border:1px solid ' + (day.waiveLate2 ? '#059669' : '#f59e0b') + ';background:' + (day.waiveLate2 ? '#ecfdf5' : '#fffbeb') + ';color:' + (day.waiveLate2 ? '#059669' : '#d97706') + ';border-radius:4px;cursor:pointer;white-space:nowrap;">' + (day.waiveLate2 ? '&#10003; พัก' : 'พัก') + '</button>' : '') + '</div>' : '')}</td>
+                                <td style="min-width:120px;${day.note ? 'background:#fffde7;' : ''}"><input type="text" class="note-input" value="${escHtml(day.note || '')}" placeholder="หมายเหตุ..." onchange="updateNote(${rIdx},${idx},this.value)" style="width:100%;padding:2px 6px;border:1px solid ${day.note ? '#f59e0b' : 'var(--input-border)'};border-radius:4px;font-size:11px;font-family:inherit;background:${day.note ? '#fffde7' : 'var(--input-bg)'};color:${day.note ? '#92400e' : 'var(--text-primary)'};outline:none;font-weight:${day.note ? '600' : 'normal'};"></td>
                             </tr>`;
-                        }).join('')}
+    }).join('')}
                     </tbody>
                     <tfoot><tr>
                         <td colspan="8" class="text-right">รวม</td>
@@ -1044,8 +1045,8 @@ function renderReportList() {
         </div>
         <div class="space-y-3">
             ${reportRecords.map(record => {
-                const highDeduct = record.totalDeduction >= 60;
-                return `
+        const highDeduct = record.totalDeduction >= 60;
+        return `
                 <div class="card flex items-center justify-between" style="${highDeduct ? 'border-left:4px solid #ef4444;background:#fef2f2;' : ''}">
                     <div class="flex items-center gap-4">
                         <input type="checkbox" ${selectedReportIds.has(record.id) ? 'checked' : ''} onchange="toggleReportId('${record.id}')">
@@ -1062,7 +1063,7 @@ function renderReportList() {
                         <button class="btn-icon" onclick="downloadSinglePDF('${record.id}')" title="ดาวน์โหลด PDF" style="background:#10b981;color:white;border-radius:6px;padding:6px 10px;font-size:14px;">&#128196; PDF</button>
                     </div>
                 </div>`;
-            }).join('')}
+    }).join('')}
         </div>
     `;
 }
@@ -1163,23 +1164,23 @@ function printSummaryReport() {
             <th>สถานะ</th>
         </tr></thead>
         <tbody>${sorted.map((r, i) => {
-            let status = '';
-            if (r.totalDeduction === 0 && r.absent === 0) status = '<span class="badge badge-green">ดี</span>';
-            else if (r.absent > 0) status = '<span class="badge badge-red">มีขาด</span>';
-            else status = '<span class="badge badge-amber">มีหัก</span>';
-            return '<tr>' +
-                '<td>' + (i + 1) + '</td>' +
-                '<td>' + r.empCode + '</td>' +
-                '<td class="text-left">' + r.empName + '</td>' +
-                '<td>' + r.workingDays + '</td>' +
-                '<td>' + r.holidays + '</td>' +
-                '<td style="color:' + (r.absent > 0 ? '#dc2626' : 'inherit') + ';font-weight:' + (r.absent > 0 ? '700' : '400') + ';">' + r.absent + '</td>' +
-                '<td>' + (r.totalLate1Baht > 0 ? r.totalLate1Baht : 0) + '</td>' +
-                '<td>' + (r.totalLate2Baht > 0 ? r.totalLate2Baht : 0) + '</td>' +
-                '<td style="color:#dc2626;font-weight:700;">' + r.totalDeduction + '</td>' +
-                '<td>' + status + '</td>' +
+        let status = '';
+        if (r.totalDeduction === 0 && r.absent === 0) status = '<span class="badge badge-green">ดี</span>';
+        else if (r.absent > 0) status = '<span class="badge badge-red">มีขาด</span>';
+        else status = '<span class="badge badge-amber">มีหัก</span>';
+        return '<tr>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + r.empCode + '</td>' +
+            '<td class="text-left">' + r.empName + '</td>' +
+            '<td>' + r.workingDays + '</td>' +
+            '<td>' + r.holidays + '</td>' +
+            '<td style="color:' + (r.absent > 0 ? '#dc2626' : 'inherit') + ';font-weight:' + (r.absent > 0 ? '700' : '400') + ';">' + r.absent + '</td>' +
+            '<td>' + (r.totalLate1Baht > 0 ? r.totalLate1Baht : 0) + '</td>' +
+            '<td>' + (r.totalLate2Baht > 0 ? r.totalLate2Baht : 0) + '</td>' +
+            '<td style="color:#dc2626;font-weight:700;">' + r.totalDeduction + '</td>' +
+            '<td>' + status + '</td>' +
             '</tr>';
-        }).join('')}</tbody>
+    }).join('')}</tbody>
         <tfoot><tr>
             <td colspan="3" class="text-right">รวมทั้งหมด</td>
             <td>${grandWorkingDays}</td><td>${grandHolidays}</td><td>${grandAbsent}</td>
@@ -1204,7 +1205,7 @@ function buildReportHTML(record) {
         </div>
         <table><thead><tr><th>#</th><th>วันที่</th><th>วัน</th><th>หยุด</th><th>เข้า</th><th>พักออก</th><th>พักเข้า</th><th>เลิก</th><th>เข้าสาย</th><th>หัก(บาท)</th><th>รอบพัก</th><th>สายพัก</th><th>หัก(บาท)</th></tr></thead>
         <tbody>${record.days.map((day, idx) => {
-            return '<tr class="' + (day.isHoliday ? 'holiday' : day.isAbsent ? 'absent' : '') + '">' +
+        return '<tr class="' + (day.isHoliday ? 'holiday' : day.isAbsent ? 'absent' : '') + '">' +
             '<td>' + (idx + 1) + '</td><td>' + formatDate(day.date) + '</td><td>' + day.dayOfWeek + '</td><td>' + (day.isHoliday ? 'YES' : '') + '</td>' +
             '<td>' + (day.isHoliday ? '-' : formatTime(day.scan1)) + '</td><td>' + (day.isHoliday ? '-' : formatTime(day.scan2)) + '</td>' +
             '<td>' + (day.isHoliday ? '-' : formatTime(day.scan3)) + '</td><td>' + (day.isHoliday ? '-' : formatTime(day.scan4)) + '</td>' +
@@ -1212,7 +1213,7 @@ function buildReportHTML(record) {
             '<td>' + (day.isHoliday ? '-' : (day.breakRound || '')) + '</td>' +
             '<td>' + (day.late2Minutes > 0 ? minutesToTime(day.late2Minutes) : '') + '</td><td>' + (day.late2Baht > 0 ? day.late2Baht : 0) + '</td>' +
             '</tr>';
-        }).join('')}</tbody>
+    }).join('')}</tbody>
         <tfoot><tr style="background:#f3f4f6;font-weight:bold;"><td colspan="8" class="text-right">รวม</td>
             <td>${minutesToTime(record.days.reduce((s, d) => s + d.late1Minutes, 0))}</td><td>${record.totalLate1Baht}</td><td></td>
             <td>${minutesToTime(record.days.reduce((s, d) => s + d.late2Minutes, 0))}</td><td>${record.totalLate2Baht}</td>
@@ -1329,8 +1330,8 @@ async function renderBonus(container) {
                         <input type="text" id="bonusSearchInput" class="input-field" placeholder="🔍 ชื่อ หรือ รหัสพนักงาน..." value="${bonusSearch}" oninput="bonusSearch=this.value;renderBonusContent()" style="width:100%;">
                     </div>
                     <div style="display:flex;gap:8px;align-items:flex-end;">
-                        <button id="bonusSortAsc" onclick="setBonusSort('asc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort==='asc'?'#3b82f6':'#d1d5db'};background:${bonusSort==='asc'?'#eff6ff':'white'};color:${bonusSort==='asc'?'#2563eb':'#374151'};font-weight:${bonusSort==='asc'?'600':'400'};">A→Z</button>
-                        <button id="bonusSortDesc" onclick="setBonusSort('desc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort==='desc'?'#3b82f6':'#d1d5db'};background:${bonusSort==='desc'?'#eff6ff':'white'};color:${bonusSort==='desc'?'#2563eb':'#374151'};font-weight:${bonusSort==='desc'?'600':'400'};">Z→A</button>
+                        <button id="bonusSortAsc" onclick="setBonusSort('asc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort === 'asc' ? '#3b82f6' : '#d1d5db'};background:${bonusSort === 'asc' ? '#eff6ff' : 'white'};color:${bonusSort === 'asc' ? '#2563eb' : '#374151'};font-weight:${bonusSort === 'asc' ? '600' : '400'};">A→Z</button>
+                        <button id="bonusSortDesc" onclick="setBonusSort('desc')" style="padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid ${bonusSort === 'desc' ? '#3b82f6' : '#d1d5db'};background:${bonusSort === 'desc' ? '#eff6ff' : 'white'};color:${bonusSort === 'desc' ? '#2563eb' : '#374151'};font-weight:${bonusSort === 'desc' ? '600' : '400'};">Z→A</button>
                     </div>
                     <div style="display:flex;gap:8px;">
                         <button class="btn-primary" onclick="loadBonusPage()">🔄 โหลดข้อมูล</button>
@@ -1381,18 +1382,18 @@ async function initBonusAllEmployees() {
 function setBonusSort(dir) {
     bonusSort = dir;
     // Update button styles
-    const asc  = document.getElementById('bonusSortAsc');
+    const asc = document.getElementById('bonusSortAsc');
     const desc = document.getElementById('bonusSortDesc');
     if (asc) {
-        asc.style.border      = dir === 'asc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
-        asc.style.background  = dir === 'asc' ? '#eff6ff' : 'white';
-        asc.style.color       = dir === 'asc' ? '#2563eb' : '#374151';
-        asc.style.fontWeight  = dir === 'asc' ? '600' : '400';
+        asc.style.border = dir === 'asc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
+        asc.style.background = dir === 'asc' ? '#eff6ff' : 'white';
+        asc.style.color = dir === 'asc' ? '#2563eb' : '#374151';
+        asc.style.fontWeight = dir === 'asc' ? '600' : '400';
     }
     if (desc) {
-        desc.style.border     = dir === 'desc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
+        desc.style.border = dir === 'desc' ? '1px solid #3b82f6' : '1px solid #d1d5db';
         desc.style.background = dir === 'desc' ? '#eff6ff' : 'white';
-        desc.style.color      = dir === 'desc' ? '#2563eb' : '#374151';
+        desc.style.color = dir === 'desc' ? '#2563eb' : '#374151';
         desc.style.fontWeight = dir === 'desc' ? '600' : '400';
     }
     renderBonusContent();
@@ -1408,10 +1409,15 @@ function renderBonusContent() {
         </div>`;
         return;
     }
+    // Filter out resigned employees (isActive === 0)
+    const activeRecords = bonusRecords.filter(r => {
+        const emp = bonusEmployees.find(e => e.id === r.employeeId);
+        return !emp || emp.isActive !== 0;
+    });
     const q = bonusSearch.trim().toLowerCase();
     let filtered = q
-        ? bonusRecords.filter(r => r.empName.toLowerCase().includes(q) || r.empCode.toLowerCase().includes(q))
-        : [...bonusRecords];
+        ? activeRecords.filter(r => r.empName.toLowerCase().includes(q) || r.empCode.toLowerCase().includes(q))
+        : [...activeRecords];
     filtered.sort((a, b) => {
         const cmp = a.empCode.localeCompare(b.empCode, undefined, { numeric: true, sensitivity: 'base' });
         return bonusSort === 'asc' ? cmp : -cmp;
@@ -1431,7 +1437,7 @@ function renderBonusCard(rec, idx) {
     const st = statusMap[rec.bonusStatus] || statusMap.pending;
     const att = rec.attendanceSummary;
     const goodLogs = (rec.behaviorLogs || []).filter(l => l.type === 'good');
-    const badLogs  = (rec.behaviorLogs || []).filter(l => l.type === 'bad');
+    const badLogs = (rec.behaviorLogs || []).filter(l => l.type === 'bad');
 
     return `
     <div class="card mb-6" id="bonusCard_${rec.id}">
@@ -1506,14 +1512,14 @@ function renderBonusCard(rec, idx) {
                 <div>
                     <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">สถานะ</label>
                     <select id="bonusSt_${rec.id}" class="input-field" style="width:140px;">
-                        <option value="pending"  ${rec.bonusStatus==='pending'  ? 'selected':''}>🟡 รอพิจารณา</option>
-                        <option value="approved" ${rec.bonusStatus==='approved' ? 'selected':''}>🟢 อนุมัติแล้ว</option>
-                        <option value="rejected" ${rec.bonusStatus==='rejected' ? 'selected':''}>🔴 ไม่อนุมัติ</option>
+                        <option value="pending"  ${rec.bonusStatus === 'pending' ? 'selected' : ''}>🟡 รอพิจารณา</option>
+                        <option value="approved" ${rec.bonusStatus === 'approved' ? 'selected' : ''}>🟢 อนุมัติแล้ว</option>
+                        <option value="rejected" ${rec.bonusStatus === 'rejected' ? 'selected' : ''}>🔴 ไม่อนุมัติ</option>
                     </select>
                 </div>
                 <div>
                     <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">สรุปการพิจารณา</label>
-                    <input type="text" id="bonusSum_${rec.id}" value="${escHtml(rec.summary||'')}" placeholder="สรุปเหตุผลการพิจารณา..." class="input-field" style="width:100%;">
+                    <input type="text" id="bonusSum_${rec.id}" value="${escHtml(rec.summary || '')}" placeholder="สรุปเหตุผลการพิจารณา..." class="input-field" style="width:100%;">
                 </div>
             </div>
             <div style="margin-top:12px;display:flex;justify-content:flex-end;">
@@ -1545,7 +1551,7 @@ function showAddBehaviorForm(recId, type) {
     const today = new Date().toISOString().slice(0, 10);
     formEl.style.display = 'block';
     formEl.innerHTML = `
-        <div style="margin-top:12px;padding:14px;background:${type==='good'?'#f0fdf4':'#fff7ed'};border:1px solid ${type==='good'?'#bbf7d0':'#fed7aa'};border-radius:10px;">
+        <div style="margin-top:12px;padding:14px;background:${type === 'good' ? '#f0fdf4' : '#fff7ed'};border:1px solid ${type === 'good' ? '#bbf7d0' : '#fed7aa'};border-radius:10px;">
             <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:10px;">+ เพิ่ม${typeLabel}</div>
             <div style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;">
                 <div>
@@ -1559,7 +1565,7 @@ function showAddBehaviorForm(recId, type) {
             </div>
             <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
                 <button onclick="document.getElementById('behaviorForm_${recId}').style.display='none'" style="font-size:12px;padding:5px 14px;border:1px solid #d1d5db;background:white;color:#6b7280;border-radius:6px;cursor:pointer;">ยกเลิก</button>
-                <button onclick="saveBehaviorLog('${recId}','${type}')" style="font-size:12px;padding:5px 14px;border:none;background:${type==='good'?'#16a34a':'#ea580c'};color:white;border-radius:6px;cursor:pointer;font-weight:600;">บันทึก</button>
+                <button onclick="saveBehaviorLog('${recId}','${type}')" style="font-size:12px;padding:5px 14px;border:none;background:${type === 'good' ? '#16a34a' : '#ea580c'};color:white;border-radius:6px;cursor:pointer;font-weight:600;">บันทึก</button>
             </div>
         </div>`;
     document.getElementById(`blogDesc_${recId}`).focus();
@@ -1615,12 +1621,12 @@ async function loadBonusAttendance(recId, employeeId) {
                 const records = await api.getAttendance({ shopId: DEFAULT_SHOP_ID, month: m, year: bonusYear });
                 const empRec = records.find(r => r.employeeId === employeeId);
                 if (empRec) {
-                    workingDays   += empRec.workingDays    || 0;
-                    holidays      += empRec.holidays       || 0;
-                    absent        += empRec.absent         || 0;
+                    workingDays += empRec.workingDays || 0;
+                    holidays += empRec.holidays || 0;
+                    absent += empRec.absent || 0;
                     totalDeduction += empRec.totalDeduction || 0;
-                    late1Baht     += empRec.totalLate1Baht || 0;
-                    late2Baht     += empRec.totalLate2Baht || 0;
+                    late1Baht += empRec.totalLate1Baht || 0;
+                    late2Baht += empRec.totalLate2Baht || 0;
                     if (empRec.days) {
                         for (const d of empRec.days) {
                             late1Minutes += d.late1Minutes || 0;
@@ -1628,7 +1634,7 @@ async function loadBonusAttendance(recId, employeeId) {
                         }
                     }
                 }
-            } catch {}
+            } catch { }
         }
         const summary = { workingDays, holidays, absent, late1Minutes, late1Baht, late2Minutes, late2Baht, totalDeduction };
         await api.updateBonusRecord(recId, { attendanceSummary: summary });
@@ -1641,7 +1647,7 @@ async function loadBonusAttendance(recId, employeeId) {
 
 async function saveBonusRecord(recId) {
     const amount = parseFloat(document.getElementById(`bonusAmt_${recId}`).value) || 0;
-    const status  = document.getElementById(`bonusSt_${recId}`).value;
+    const status = document.getElementById(`bonusSt_${recId}`).value;
     const summary = document.getElementById(`bonusSum_${recId}`).value.trim();
     try {
         await api.updateBonusRecord(recId, { bonusAmount: amount, bonusStatus: status, summary });
@@ -1658,13 +1664,20 @@ async function saveBonusRecord(recId) {
 function showBonusSummaryReport() {
     if (bonusRecords.length === 0) { alert('ไม่มีข้อมูลโบนัส — กรุณาโหลดข้อมูลก่อน'); return; }
 
+    // Filter out resigned employees (isActive === 0)
+    const activeBonus = bonusRecords.filter(r => {
+        const emp = bonusEmployees.find(e => e.id === r.employeeId);
+        return !emp || emp.isActive !== 0;
+    });
+    if (activeBonus.length === 0) { alert('ไม่มีข้อมูลโบนัสของพนักงานที่ยังทำงานอยู่'); return; }
+
     const statusMap = { pending: '🟡 รอพิจารณา', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ไม่อนุมัติ' };
-    const approved  = bonusRecords.filter(r => r.bonusStatus === 'approved');
-    const pending   = bonusRecords.filter(r => r.bonusStatus === 'pending');
-    const rejected  = bonusRecords.filter(r => r.bonusStatus === 'rejected');
+    const approved = activeBonus.filter(r => r.bonusStatus === 'approved');
+    const pending = activeBonus.filter(r => r.bonusStatus === 'pending');
+    const rejected = activeBonus.filter(r => r.bonusStatus === 'rejected');
     const totalBudget = approved.reduce((s, r) => s + (parseFloat(r.bonusAmount) || 0), 0);
 
-    const sorted = [...bonusRecords].sort((a, b) => (parseFloat(b.bonusAmount)||0) - (parseFloat(a.bonusAmount)||0));
+    const sorted = [...activeBonus].sort((a, b) => (parseFloat(b.bonusAmount) || 0) - (parseFloat(a.bonusAmount) || 0));
 
     const rows = sorted.map((r, i) => {
         const amt = parseFloat(r.bonusAmount) || 0;
@@ -1672,17 +1685,17 @@ function showBonusSummaryReport() {
         const stLabel = statusMap[r.bonusStatus] || '🟡 รอพิจารณา';
         const rowBg = r.bonusStatus === 'approved' ? '#f0fdf4' : r.bonusStatus === 'rejected' ? '#fff1f2' : '';
         return `<tr style="background:${rowBg};">
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;color:#6b7280;">${i+1}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;color:#6b7280;">${i + 1}</td>
             <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">
                 <div style="font-weight:600;color:#111827;">${escHtml(r.empName)}</div>
                 <div style="font-size:11px;color:#9ca3af;">รหัส ${escHtml(r.empCode)}</div>
             </td>
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${att ? att.workingDays+' วัน' : '-'}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att&&att.absent>0?'#ef4444':'#10b981'};font-weight:600;">${att ? att.absent+' วัน' : '-'}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att&&att.totalDeduction>0?'#f59e0b':'#10b981'};">${att ? att.totalDeduction.toLocaleString()+'฿' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${att ? att.workingDays + ' วัน' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att && att.absent > 0 ? '#ef4444' : '#10b981'};font-weight:600;">${att ? att.absent + ' วัน' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:${att && att.totalDeduction > 0 ? '#f59e0b' : '#10b981'};">${att ? att.totalDeduction.toLocaleString() + '฿' : '-'}</td>
             <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${stLabel}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;font-size:15px;color:${amt>0?'#059669':'#6b7280'};">${amt > 0 ? amt.toLocaleString()+' ฿' : '-'}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">${escHtml(r.summary||'-')}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;font-size:15px;color:${amt > 0 ? '#059669' : '#6b7280'};">${amt > 0 ? amt.toLocaleString() + ' ฿' : '-'}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">${escHtml(r.summary || '-')}</td>
         </tr>`;
     }).join('');
 
