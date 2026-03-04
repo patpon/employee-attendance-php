@@ -1198,13 +1198,10 @@ function buildReportHTML(record) {
     const buddhistYear = ceToBuddhist(record.year);
     return `
         <div class="header"><h2>ตารางสรุปการทำงานรายบุคคล</h2><p>ร้าน: ${shopName} | ประจำเดือน: ${THAI_MONTHS[record.month - 1]} ${buddhistYear}</p></div>
-        <div class="info-row">
-            <span><b>รหัส:</b> ${record.empCode}</span>
-            <span><b>ชื่อ:</b> ${record.empName}</span>
-            <span><b>ทำงาน:</b> ${record.workingDays}</span>
-            <span><b>หยุด:</b> ${record.holidays}</span>
-            <span><b>ขาด:</b> ${record.absent}</span>
-            <span><b>รวมหัก:</b> ${record.totalDeduction} บาท</span>
+        <div class="info-grid">
+            <div><span class="label">รหัส:</span> ${record.empCode}</div><div><span class="label">ชื่อ:</span> ${record.empName}</div>
+            <div><span class="label">วันทำงาน:</span> ${record.workingDays} วัน</div><div><span class="label">วันหยุด:</span> ${record.holidays} วัน</div>
+            <div><span class="label">ขาด:</span> ${record.absent} วัน</div><div><span class="label">รวมหัก:</span> ${record.totalDeduction} บาท</div>
         </div>
         <table><thead><tr><th>#</th><th>วันที่</th><th>วัน</th><th>หยุด</th><th>เข้า</th><th>พักออก</th><th>พักเข้า</th><th>เลิก</th><th>เข้าสาย</th><th>หัก(บาท)</th><th>รอบพัก</th><th>สายพัก</th><th>หัก(บาท)</th></tr></thead>
         <tbody>${record.days.map((day, idx) => {
@@ -1220,31 +1217,29 @@ function buildReportHTML(record) {
         <tfoot><tr style="background:#f3f4f6;font-weight:bold;"><td colspan="8" class="text-right">รวม</td>
             <td>${minutesToTime(record.days.reduce((s, d) => s + d.late1Minutes, 0))}</td><td>${record.totalLate1Baht}</td><td></td>
             <td>${minutesToTime(record.days.reduce((s, d) => s + d.late2Minutes, 0))}</td><td>${record.totalLate2Baht}</td>
-        </tr></tfoot></table>
-        <div class="summary"><p>รวมหักทั้งหมด: ${record.totalDeduction} บาท</p></div>`;
+        </tr></tfoot></table>`;
+
 }
 
 function getPrintStyles() {
     return `
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-        @page { size: A4 portrait; margin: 8mm 8mm; }
+        @page { size: A4 portrait; margin: 12mm 10mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Sarabun', sans-serif; font-size: 11px; padding: 0; }
-        .header { text-align: center; margin-bottom: 6px; }
-        .header h2 { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-        .header p { font-size: 12px; color: #333; }
-        .info-row { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 6px; font-size: 11px; }
-        .info-row b { font-weight: 700; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-bottom: 6px; font-size: 11px; }
+        body { font-family: 'Sarabun', sans-serif; font-size: 14px; padding: 0; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .header p { font-size: 15px; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-bottom: 14px; font-size: 15px; }
         .info-grid .label { font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: auto; }
-        th, td { border: 1px solid #444; padding: 2px 3px; text-align: center; line-height: 1.2; }
-        th { background: #2563eb; color: white; font-weight: 600; font-size: 9px; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        th, td { border: 1px solid #444; padding: 5px 6px; text-align: center; }
+        th { background: #2563eb; color: white; font-weight: 600; font-size: 12px; white-space: nowrap; }
         .holiday { background: #fef3c7; }
         .absent { background: #fee2e2; }
         .text-right { text-align: right; }
-        .summary { margin-top: 6px; font-size: 12px; font-weight: 600; }
-        .footer { margin-top: 6px; font-size: 9px; color: #666; }
+        .summary { margin-top: 14px; font-size: 15px; font-weight: 600; }
+        .footer { margin-top: 16px; font-size: 11px; color: #666; }
         .page-break { page-break-after: always; padding: 0; }
         .page-break:last-child { page-break-after: auto; }
         @media print {
