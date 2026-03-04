@@ -64,22 +64,22 @@ async function generatePDF(records) {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         // Title
-        doc.setFontSize(18);
-        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 14, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 10, { align: 'center' });
 
-        doc.setFontSize(12);
+        doc.setFontSize(9);
         doc.text(
             `ร้าน: ${record.shopName}  |  ประจำเดือน: ${THAI_MONTHS[record.month - 1]} ${buddhistYear}`,
-            pageWidth / 2, 21, { align: 'center' }
+            pageWidth / 2, 16, { align: 'center' }
         );
 
         // Info
-        doc.setFontSize(11);
-        doc.text(`รหัส: ${record.empCode}`, 14, 29);
-        doc.text(`ชื่อ: ${record.empName}`, 60, 29);
+        doc.setFontSize(8);
+        doc.text(`รหัส: ${record.empCode}`, 8, 22);
+        doc.text(`ชื่อ: ${record.empName}`, 50, 22);
         doc.text(
             `ทำงาน: ${record.workingDays}  หยุด: ${record.holidays}  ขาด: ${record.absent}  รวมหัก: ${record.totalDeduction} บาท`,
-            14, 35
+            8, 27
         );
 
         // Table
@@ -120,17 +120,17 @@ async function generatePDF(records) {
         doc.autoTable({
             head: headers,
             body: body,
-            startY: 40,
+            startY: 30,
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2, halign: 'center', valign: 'middle', font: fontName },
-            headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, font: fontName },
+            styles: { fontSize: 6.5, cellPadding: 1.2, halign: 'center', valign: 'middle', font: fontName, lineWidth: 0.2 },
+            headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, font: fontName },
             columnStyles: {
-                0: { cellWidth: 8 }, 1: { cellWidth: 18 }, 2: { cellWidth: 12 }, 3: { cellWidth: 10 },
-                4: { cellWidth: 13 }, 5: { cellWidth: 13 }, 6: { cellWidth: 13 }, 7: { cellWidth: 13 },
-                8: { cellWidth: 16 }, 9: { cellWidth: 14 }, 10: { cellWidth: 18 },
-                11: { cellWidth: 16 }, 12: { cellWidth: 14 },
+                0: { cellWidth: 7 }, 1: { cellWidth: 16 }, 2: { cellWidth: 11 }, 3: { cellWidth: 9 },
+                4: { cellWidth: 12 }, 5: { cellWidth: 12 }, 6: { cellWidth: 12 }, 7: { cellWidth: 12 },
+                8: { cellWidth: 14 }, 9: { cellWidth: 12 }, 10: { cellWidth: 17 },
+                11: { cellWidth: 14 }, 12: { cellWidth: 12 },
             },
-            margin: { left: 10, right: 10 },
+            margin: { left: 8, right: 8 },
             didParseCell: function (data) {
                 if (data.section === 'body') {
                     const day = days[data.row.index];
@@ -147,8 +147,8 @@ async function generatePDF(records) {
         });
 
         // Footer
-        doc.setFontSize(7);
-        doc.text(`พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`, 14, doc.internal.pageSize.getHeight() - 5);
+        doc.setFontSize(6);
+        doc.text(`พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`, 8, doc.internal.pageSize.getHeight() - 4);
     }
 
     // Download
