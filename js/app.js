@@ -1199,7 +1199,7 @@ function buildReportHTML(record) {
     return `
         <div class="header"><h2>ตารางสรุปการทำงานรายบุคคล</h2><p>ร้าน: ${shopName} | ประจำเดือน: ${THAI_MONTHS[record.month - 1]} ${buddhistYear}</p></div>
         <div class="info-grid">
-            <div><span class="label">ชื่อ:</span> ${record.empName}</div><div><span class="label">รหัส:</span> ${record.empCode}</div>
+            <div><span class="label">รหัส:</span> ${record.empCode}</div><div><span class="label">ชื่อ:</span> ${record.empName}</div>
             <div><span class="label">วันทำงาน:</span> ${record.workingDays} วัน</div><div><span class="label">วันหยุด:</span> ${record.holidays} วัน</div>
             <div><span class="label">ขาด:</span> ${record.absent} วัน</div><div><span class="label">รวมหัก:</span> ${record.totalDeduction} บาท</div>
         </div>
@@ -1224,15 +1224,29 @@ function buildReportHTML(record) {
 function getPrintStyles() {
     return `
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-        *{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Sarabun',sans-serif;font-size:11px;padding:20px;}
-        .header{text-align:center;margin-bottom:15px;}.header h2{font-size:16px;margin-bottom:5px;}
-        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;font-size:12px;}.info-grid .label{font-weight:600;}
-        table{width:100%;border-collapse:collapse;font-size:10px;}th,td{border:1px solid #333;padding:3px 5px;text-align:center;}
-        th{background:#2563eb;color:white;font-weight:600;}.holiday{background:#fef3c7;}.absent{background:#fee2e2;}
-        .text-right{text-align:right;}.summary{margin-top:10px;font-size:12px;}.footer{margin-top:15px;font-size:10px;color:#666;}
-        .page-break{page-break-after:always;margin-bottom:20px;}
-        .page-break:last-child{page-break-after:auto;}
-        @media print{body{padding:10px;}.page-break{page-break-after:always;}.page-break:last-child{page-break-after:auto;}}
+        @page { size: A4 portrait; margin: 12mm 10mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Sarabun', sans-serif; font-size: 14px; padding: 0; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .header p { font-size: 15px; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-bottom: 14px; font-size: 15px; }
+        .info-grid .label { font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        th, td { border: 1px solid #444; padding: 5px 6px; text-align: center; }
+        th { background: #2563eb; color: white; font-weight: 600; font-size: 12px; white-space: nowrap; }
+        .holiday { background: #fef3c7; }
+        .absent { background: #fee2e2; }
+        .text-right { text-align: right; }
+        .summary { margin-top: 14px; font-size: 15px; font-weight: 600; }
+        .footer { margin-top: 16px; font-size: 11px; color: #666; }
+        .page-break { page-break-after: always; padding: 0; }
+        .page-break:last-child { page-break-after: auto; }
+        @media print {
+            body { padding: 0; }
+            .page-break { page-break-after: always; }
+            .page-break:last-child { page-break-after: auto; }
+        }
     `;
 }
 

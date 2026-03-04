@@ -46,7 +46,7 @@ async function generatePDF(records) {
     try { fontData = await loadSarabunFont(); } catch (e) { console.warn('Font load failed:', e); }
     const fontName = fontData ? 'Sarabun' : 'helvetica';
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     if (fontData) {
         doc.addFileToVFS('Sarabun-Regular.ttf', fontData);
@@ -64,28 +64,28 @@ async function generatePDF(records) {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         // Title
-        doc.setFontSize(14);
-        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 12, { align: 'center' });
+        doc.setFontSize(18);
+        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 14, { align: 'center' });
 
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.text(
             `ร้าน: ${record.shopName}  |  ประจำเดือน: ${THAI_MONTHS[record.month - 1]} ${buddhistYear}`,
-            pageWidth / 2, 18, { align: 'center' }
+            pageWidth / 2, 21, { align: 'center' }
         );
 
         // Info
-        doc.setFontSize(9);
-        doc.text(`ชื่อ: ${record.empName}`, 14, 25);
-        doc.text(`รหัส: ${record.empCode}`, 80, 25);
+        doc.setFontSize(11);
+        doc.text(`รหัส: ${record.empCode}`, 14, 29);
+        doc.text(`ชื่อ: ${record.empName}`, 60, 29);
         doc.text(
             `ทำงาน: ${record.workingDays}  หยุด: ${record.holidays}  ขาด: ${record.absent}  รวมหัก: ${record.totalDeduction} บาท`,
-            140, 25
+            14, 35
         );
 
         // Table
         const headers = [
             ['#', 'วันที่', 'วัน', 'หยุด', 'เข้า', 'พักออก', 'พักเข้า', 'เลิก',
-             'เข้าสาย', 'หัก(บาท)', 'รอบพัก', 'สายพัก', 'หัก(บาท)'],
+                'เข้าสาย', 'หัก(บาท)', 'รอบพัก', 'สายพัก', 'หัก(บาท)'],
         ];
 
         const days = record.days || [];
@@ -120,16 +120,17 @@ async function generatePDF(records) {
         doc.autoTable({
             head: headers,
             body: body,
-            startY: 30,
+            startY: 40,
             theme: 'grid',
-            styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle', font: fontName },
-            headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, font: fontName },
+            styles: { fontSize: 8, cellPadding: 2, halign: 'center', valign: 'middle', font: fontName },
+            headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, font: fontName },
             columnStyles: {
-                0: { cellWidth: 8 }, 1: { cellWidth: 22 }, 2: { cellWidth: 16 }, 3: { cellWidth: 12 },
-                4: { cellWidth: 16 }, 5: { cellWidth: 16 }, 6: { cellWidth: 16 }, 7: { cellWidth: 16 },
-                8: { cellWidth: 22 }, 9: { cellWidth: 16 }, 10: { cellWidth: 14 },
+                0: { cellWidth: 8 }, 1: { cellWidth: 18 }, 2: { cellWidth: 12 }, 3: { cellWidth: 10 },
+                4: { cellWidth: 13 }, 5: { cellWidth: 13 }, 6: { cellWidth: 13 }, 7: { cellWidth: 13 },
+                8: { cellWidth: 16 }, 9: { cellWidth: 14 }, 10: { cellWidth: 18 },
                 11: { cellWidth: 16 }, 12: { cellWidth: 14 },
             },
+            margin: { left: 10, right: 10 },
             didParseCell: function (data) {
                 if (data.section === 'body') {
                     const day = days[data.row.index];
