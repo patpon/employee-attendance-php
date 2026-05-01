@@ -59,17 +59,15 @@ function parseExcelFile(arrayBuffer) {
             const totalSeconds = Math.round(row[colTime] * 86400);
             const h = Math.floor(totalSeconds / 3600) % 24;
             const m = Math.floor((totalSeconds % 3600) / 60);
-            const s = totalSeconds % 60;
-            timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            timeStr = `${h}:${m.toString().padStart(2, '0')}:00`;
         }
 
-        // Normalize time to HH:mm:ss
+        // Normalize time to HH:mm:00 (strip seconds to prevent near-duplicate scans)
         const timeParts = timeStr.split(':');
         if (timeParts.length >= 2) {
             const h = parseInt(timeParts[0], 10);
             const m = parseInt(timeParts[1], 10);
-            const s = timeParts.length >= 3 ? parseInt(timeParts[2], 10) : 0;
-            timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
         }
 
         const timestamp = new Date(`${isoDate}T${timeStr}`).getTime();

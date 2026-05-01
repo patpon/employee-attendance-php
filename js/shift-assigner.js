@@ -19,6 +19,16 @@ function groupScansByDate(scans) {
         if (!groups[assignDate]) groups[assignDate] = [];
         groups[assignDate].push(scan);
     }
+    // Deduplicate each day's scans by HH:MM to handle near-duplicate records in DB
+    for (const date of Object.keys(groups)) {
+        const seen = new Set();
+        groups[date] = groups[date].filter(scan => {
+            const key = scan.time.substring(0, 5);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
     return groups;
 }
 
