@@ -469,7 +469,8 @@ async function processImport() {
 
             if (empScans.length === 0) continue;
 
-            const attendance = processEmployeeAttendance(employee, empScans, shopName, month, year);
+            // Always use latest DEFAULT_SHIFT_CONFIG so settings changes take effect immediately
+            const attendance = processEmployeeAttendance({ ...employee, shiftConfig: { ...DEFAULT_SHIFT_CONFIG } }, empScans, shopName, month, year);
             mergeManualEdits(attendance, existingByEmp.get(empCode));
             await api.saveAttendance(attendance);
             processedCount++;
@@ -614,7 +615,8 @@ async function reprocessAttendance() {
             if (!employee) continue;
             processedCount++;
             statusEl.textContent = `กำลังประมวลผล ${processedCount}/${totalEmp} คน...`;
-            const attendance = processEmployeeAttendance(employee, empScans, shopName, month, year);
+            // Always use latest DEFAULT_SHIFT_CONFIG so settings changes take effect immediately
+            const attendance = processEmployeeAttendance({ ...employee, shiftConfig: { ...DEFAULT_SHIFT_CONFIG } }, empScans, shopName, month, year);
             mergeManualEdits(attendance, existingByEmp.get(empCode));
             await api.saveAttendance(attendance);
         }
