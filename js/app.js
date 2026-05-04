@@ -1205,15 +1205,14 @@ function buildReportHTML(record) {
             <div><span class="label">วันทำงาน:</span> ${record.workingDays} วัน</div><div><span class="label">วันหยุด:</span> ${record.holidays} วัน</div>
             <div><span class="label">ขาด:</span> ${record.absent} วัน</div><div><span class="label">รวมหัก:</span> ${record.totalDeduction} บาท</div>
         </div>
-        <table><colgroup><col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"><col class="c11"><col class="c12"></colgroup><thead><tr><th>#</th><th>วันที่</th><th>วัน</th><th>หยุด</th><th>เข้า</th><th>พักออก</th><th>พักเข้า</th><th>เลิก</th><th>เข้าสาย</th><th>หัก(บ.)</th><th>รอบพัก</th><th>สายพัก</th><th>หัก(บ.)</th></tr></thead>
+        <table><thead><tr><th>#</th><th>วันที่</th><th>วัน</th><th>หยุด</th><th>เข้า</th><th>พักออก</th><th>พักเข้า</th><th>เลิก</th><th>เข้าสาย</th><th>หัก(บาท)</th><th>รอบพัก</th><th>สายพัก</th><th>หัก(บาท)</th></tr></thead>
         <tbody>${record.days.map((day, idx) => {
-        const roundShort = day.breakRound ? day.breakRound.replace(' (DL ', '/').replace(')', '') : '';
         return '<tr class="' + (day.isHoliday ? 'holiday' : day.isAbsent ? 'absent' : '') + '">' +
-            '<td>' + (idx + 1) + '</td><td>' + formatDate(day.date) + '</td><td>' + day.dayOfWeek + '</td><td>' + (day.isHoliday ? '✓' : '') + '</td>' +
+            '<td>' + (idx + 1) + '</td><td>' + formatDate(day.date) + '</td><td>' + day.dayOfWeek + '</td><td>' + (day.isHoliday ? 'YES' : '') + '</td>' +
             '<td>' + (day.isHoliday ? '-' : formatTime(day.scan1)) + '</td><td>' + (day.isHoliday ? '-' : formatTime(day.scan2)) + '</td>' +
             '<td>' + (day.isHoliday ? '-' : formatTime(day.scan3)) + '</td><td>' + (day.isHoliday ? '-' : formatTime(day.scan4)) + '</td>' +
             '<td>' + (day.late1Minutes > 0 ? minutesToTime(day.late1Minutes) : '') + '</td><td>' + (day.late1Baht > 0 ? day.late1Baht : 0) + '</td>' +
-            '<td>' + (day.isHoliday ? '-' : roundShort) + '</td>' +
+            '<td>' + (day.isHoliday ? '-' : (day.breakRound || '')) + '</td>' +
             '<td>' + (day.late2Minutes > 0 ? minutesToTime(day.late2Minutes) : '') + '</td><td>' + (day.late2Baht > 0 ? day.late2Baht : 0) + '</td>' +
             '</tr>';
     }).join('')}</tbody>
@@ -1227,41 +1226,28 @@ function buildReportHTML(record) {
 function getPrintStyles() {
     return `
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-        @page { size: letter portrait; margin: 7mm 7mm; }
+        @page { size: A4 portrait; margin: 12mm 10mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Sarabun', sans-serif; font-size: 14px; padding: 0; }
-        .header { text-align: center; margin-bottom: 5px; }
-        .header h2 { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
-        .header p { font-size: 14px; color: #333; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 20px; margin-bottom: 5px; font-size: 14px; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .header p { font-size: 15px; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-bottom: 14px; font-size: 15px; }
         .info-grid .label { font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-        th, td { border: 1px solid #444; text-align: center; overflow: hidden; }
-        th { background: #2563eb; color: white; font-weight: 600; font-size: 11px; white-space: nowrap; padding: 3px 4px; }
-        td { white-space: nowrap; padding: 2px 4px; }
-        col.c0  { width: 4%; }
-        col.c1  { width: 11%; }
-        col.c2  { width: 9%; }
-        col.c3  { width: 4%; }
-        col.c4  { width: 7%; }
-        col.c5  { width: 7%; }
-        col.c6  { width: 7%; }
-        col.c7  { width: 7%; }
-        col.c8  { width: 8%; }
-        col.c9  { width: 7%; }
-        col.c10 { width: 12%; }
-        col.c11 { width: 8%; }
-        col.c12 { width: 9%; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        th, td { border: 1px solid #444; padding: 5px 6px; text-align: center; }
+        th { background: #2563eb; color: white; font-weight: 600; font-size: 12px; white-space: nowrap; }
         .holiday { background: #fef3c7; }
         .absent { background: #fee2e2; }
         .text-right { text-align: right; }
-        .footer { margin-top: 4px; font-size: 10px; color: #666; }
-        .page-break { page-break-after: always; break-after: page; padding: 0; }
-        .page-break:last-child { page-break-after: auto; break-after: auto; }
+        .summary { margin-top: 14px; font-size: 15px; font-weight: 600; }
+        .footer { margin-top: 16px; font-size: 11px; color: #666; }
+        .page-break { page-break-after: always; padding: 0; }
+        .page-break:last-child { page-break-after: auto; }
         @media print {
             body { padding: 0; }
-            .page-break { page-break-after: always; break-after: page; }
-            .page-break:last-child { page-break-after: auto; break-after: auto; }
+            .page-break { page-break-after: always; }
+            .page-break:last-child { page-break-after: auto; }
         }
     `;
 }
