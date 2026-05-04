@@ -63,29 +63,27 @@ async function generatePDF(records) {
         const buddhistYear = ceToBuddhist(record.year);
         const pageWidth = doc.internal.pageSize.getWidth();
 
-        // Title
-        doc.setFontSize(18);
-        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 14, { align: 'center' });
+        // --- Header: compact to maximise table space ---
+        doc.setFontSize(14);
+        doc.text('ตารางสรุปการทำงานรายบุคคล', pageWidth / 2, 10, { align: 'center' });
 
-        doc.setFontSize(12);
+        doc.setFontSize(10);
         doc.text(
             `ร้าน: ${record.shopName}  |  ประจำเดือน: ${THAI_MONTHS[record.month - 1]} ${buddhistYear}`,
-            pageWidth / 2, 21, { align: 'center' }
+            pageWidth / 2, 16, { align: 'center' }
         );
 
-        // Info
-        doc.setFontSize(11);
-        doc.text(`รหัส: ${record.empCode}`, 14, 29);
-        doc.text(`ชื่อ: ${record.empName}`, 60, 29);
+        doc.setFontSize(9);
+        doc.text(`รหัส: ${record.empCode}    ชื่อ: ${record.empName}`, 8, 22);
         doc.text(
             `ทำงาน: ${record.workingDays}  หยุด: ${record.holidays}  ขาด: ${record.absent}  รวมหัก: ${record.totalDeduction} บาท`,
-            14, 35
+            8, 27
         );
 
         // Table
         const headers = [
             ['#', 'วันที่', 'วัน', 'หยุด', 'เข้า', 'พักออก', 'พักเข้า', 'เลิก',
-                'เข้าสาย', 'หัก(บาท)', 'รอบพัก', 'สายพัก', 'หัก(บาท)'],
+                'เข้าสาย', 'หัก(บ.)', 'รอบพัก', 'สายพัก', 'หัก(บ.)'],
         ];
 
         const days = record.days || [];
@@ -94,7 +92,7 @@ async function generatePDF(records) {
                 (idx + 1).toString(),
                 formatDate(day.date),
                 day.dayOfWeek,
-                day.isHoliday ? 'YES' : '',
+                day.isHoliday ? '✓' : '',
                 day.isHoliday ? '-' : formatTime(day.scan1),
                 day.isHoliday ? '-' : formatTime(day.scan2),
                 day.isHoliday ? '-' : formatTime(day.scan3),
@@ -117,20 +115,40 @@ async function generatePDF(records) {
             record.totalLate2Baht.toString(),
         ]);
 
+        // Column widths total = 170mm, margins 8+8=16 → 186mm < 210mm A4 ✓
+        // Row height ≈ 5.6mm × 33 rows = 185mm < 260mm available ✓ (fits even 31-day months)
         doc.autoTable({
             head: headers,
             body: body,
-            startY: 40,
+            startY: 31,
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2, halign: 'center', valign: 'middle', font: fontName },
-            headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, font: fontName },
-            columnStyles: {
-                0: { cellWidth: 8 }, 1: { cellWidth: 18 }, 2: { cellWidth: 12 }, 3: { cellWidth: 10 },
-                4: { cellWidth: 13 }, 5: { cellWidth: 13 }, 6: { cellWidth: 13 }, 7: { cellWidth: 13 },
-                8: { cellWidth: 16 }, 9: { cellWidth: 14 }, 10: { cellWidth: 18 },
-                11: { cellWidth: 16 }, 12: { cellWidth: 14 },
+            styles: {
+                fontSize: 7.5, cellPadding: 1.5,
+                halign: 'center', valign: 'middle',
+                font: fontName, lineWidth: 0.1,
+                overflow: 'linebreak',
             },
-            margin: { left: 10, right: 10 },
+            headStyles: {
+                fillColor: [37, 99, 235], textColor: [255, 255, 255],
+                fontStyle: 'bold', fontSize: 7.5, font: fontName,
+                cellPadding: 2,
+            },
+            columnStyles: {
+                0:  { cellWidth: 7  },   // #
+                1:  { cellWidth: 17 },   // วันที่
+                2:  { cellWidth: 13 },   // วัน
+                3:  { cellWidth: 8  },   // หยุด
+                4:  { cellWidth: 13 },   // เข้า
+                5:  { cellWidth: 14 },   // พักออก
+                6:  { cellWidth: 14 },   // พักเข้า
+                7:  { cellWidth: 13 },   // เลิก
+                8:  { cellWidth: 14 },   // เข้าสาย
+                9:  { cellWidth: 13 },   // หัก(บ.)
+                10: { cellWidth: 17 },   // รอบพัก  "D (DL 16:30)" ~14mm → OK
+                11: { cellWidth: 13 },   // สายพัก
+                12: { cellWidth: 13 },   // หัก(บ.)
+            },
+            margin: { left: 8, right: 8, bottom: 5 },
             didParseCell: function (data) {
                 if (data.section === 'body') {
                     const day = days[data.row.index];
@@ -148,7 +166,7 @@ async function generatePDF(records) {
 
         // Footer
         doc.setFontSize(6);
-        doc.text(`พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`, 8, doc.internal.pageSize.getHeight() - 4);
+        doc.text(`พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`, 8, doc.internal.pageSize.getHeight() - 3);
     }
 
     // Download
