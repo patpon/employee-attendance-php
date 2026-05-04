@@ -88,6 +88,10 @@ async function generatePDF(records) {
 
         const days = record.days || [];
         const body = days.map((day, idx) => {
+            // Shorten "D (DL 16:30)" → "D/16:30" to prevent cell wrapping
+            const roundShort = day.breakRound
+                ? day.breakRound.replace(' (DL ', '/').replace(')', '')
+                : '';
             return [
                 (idx + 1).toString(),
                 formatDate(day.date),
@@ -99,7 +103,7 @@ async function generatePDF(records) {
                 day.isHoliday ? '-' : formatTime(day.scan4),
                 day.late1Minutes > 0 ? minutesToTime(day.late1Minutes) : '',
                 day.late1Baht > 0 ? day.late1Baht.toString() : '0',
-                day.isHoliday ? '-' : (day.breakRound || ''),
+                day.isHoliday ? '-' : roundShort,
                 day.late2Minutes > 0 ? minutesToTime(day.late2Minutes) : '',
                 day.late2Baht > 0 ? day.late2Baht.toString() : '0',
             ];
@@ -115,28 +119,29 @@ async function generatePDF(records) {
             record.totalLate2Baht.toString(),
         ]);
 
-        // Column widths total = 170mm, margins 8+8=16 → 186mm < 210mm A4 ✓
-        // Row height ≈ 5.6mm × 33 rows = 185mm < 260mm available ✓ (fits even 31-day months)
+        // Thai Sarabun font: actual row height = 2×cellPadding + fontSize×0.3528×1.5(Thai lineHeight)
+        // fontSize=8, cellPadding=1.2 → 2.4 + 4.23 = 6.63mm per row
+        // 33 rows (31days+summary+header) × 6.63mm = 218mm < 261mm available → 43mm safety buffer ✓
         doc.autoTable({
             head: headers,
             body: body,
             startY: 31,
             theme: 'grid',
             styles: {
-                fontSize: 7.5, cellPadding: 1.5,
+                fontSize: 8, cellPadding: 1.2,
                 halign: 'center', valign: 'middle',
                 font: fontName, lineWidth: 0.1,
                 overflow: 'linebreak',
             },
             headStyles: {
                 fillColor: [37, 99, 235], textColor: [255, 255, 255],
-                fontStyle: 'bold', fontSize: 7.5, font: fontName,
-                cellPadding: 2,
+                fontStyle: 'bold', fontSize: 8, font: fontName,
+                cellPadding: 1.5,
             },
             columnStyles: {
                 0:  { cellWidth: 7  },   // #
-                1:  { cellWidth: 17 },   // วันที่
-                2:  { cellWidth: 13 },   // วัน
+                1:  { cellWidth: 17 },   // วันที่  "30/04/2026" fits
+                2:  { cellWidth: 13 },   // วัน    "พฤหัส" fits
                 3:  { cellWidth: 8  },   // หยุด
                 4:  { cellWidth: 13 },   // เข้า
                 5:  { cellWidth: 14 },   // พักออก
@@ -144,7 +149,7 @@ async function generatePDF(records) {
                 7:  { cellWidth: 13 },   // เลิก
                 8:  { cellWidth: 14 },   // เข้าสาย
                 9:  { cellWidth: 13 },   // หัก(บ.)
-                10: { cellWidth: 17 },   // รอบพัก  "D (DL 16:30)" ~14mm → OK
+                10: { cellWidth: 15 },   // รอบพัก "D/16:30" = 7 chars, fits in 15mm
                 11: { cellWidth: 13 },   // สายพัก
                 12: { cellWidth: 13 },   // หัก(บ.)
             },
