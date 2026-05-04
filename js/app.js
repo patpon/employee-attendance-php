@@ -1229,16 +1229,16 @@ function getPrintStyles() {
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         @page { size: A4 portrait; margin: 7mm 7mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Sarabun', sans-serif; font-size: 9px; padding: 0; }
-        .header { text-align: center; margin-bottom: 5px; }
-        .header h2 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-        .header p { font-size: 10px; color: #333; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-bottom: 5px; font-size: 10px; }
+        body { font-family: 'Sarabun', sans-serif; font-size: 13px; padding: 0; }
+        .header { text-align: center; margin-bottom: 6px; }
+        .header h2 { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
+        .header p { font-size: 13px; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 20px; margin-bottom: 6px; font-size: 13px; }
         .info-grid .label { font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-        th, td { border: 1px solid #444; padding: 2px 3px; text-align: center; overflow: hidden; }
-        th { background: #2563eb; color: white; font-weight: 600; font-size: 8px; white-space: nowrap; }
-        td { white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+        th, td { border: 1px solid #444; text-align: center; overflow: hidden; }
+        th { background: #2563eb; color: white; font-weight: 600; font-size: 10px; white-space: nowrap; padding: 3px 4px; }
+        td { white-space: nowrap; padding: 2px 4px; }
         col.c0  { width: 4%; }
         col.c1  { width: 11%; }
         col.c2  { width: 9%; }
@@ -1255,7 +1255,7 @@ function getPrintStyles() {
         .holiday { background: #fef3c7; }
         .absent { background: #fee2e2; }
         .text-right { text-align: right; }
-        .footer { margin-top: 4px; font-size: 7px; color: #666; }
+        .footer { margin-top: 5px; font-size: 10px; color: #666; }
         .page-break { page-break-after: always; break-after: page; padding: 0; }
         .page-break:last-child { page-break-after: auto; break-after: auto; }
         @media print {
