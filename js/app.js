@@ -1240,8 +1240,8 @@ function getPrintStyles() {
         th { background: #2563eb; color: white; font-weight: 600; font-size: 8px; white-space: nowrap; }
         td { white-space: nowrap; }
         col.c0  { width: 4%; }
-        col.c1  { width: 10%; }
-        col.c2  { width: 8%; }
+        col.c1  { width: 11%; }
+        col.c2  { width: 9%; }
         col.c3  { width: 4%; }
         col.c4  { width: 7%; }
         col.c5  { width: 7%; }
@@ -1249,9 +1249,9 @@ function getPrintStyles() {
         col.c7  { width: 7%; }
         col.c8  { width: 8%; }
         col.c9  { width: 7%; }
-        col.c10 { width: 10%; }
+        col.c10 { width: 12%; }
         col.c11 { width: 8%; }
-        col.c12 { width: 7%; }
+        col.c12 { width: 9%; }
         .holiday { background: #fef3c7; }
         .absent { background: #fee2e2; }
         .text-right { text-align: right; }
