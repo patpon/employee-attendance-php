@@ -1280,13 +1280,15 @@ function printAllReports() {
 // SETTINGS
 // ============================================
 function renderSettings(container) {
+    const sc = DEFAULT_SHIFT_CONFIG;
     container.innerHTML = `
-        <div style="max-width:600px;margin:0 auto;">
+        <div style="max-width:660px;margin:0 auto;">
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-800">ตั้งค่า</h1>
                 <p class="text-gray-500 text-sm mt-1">ตั้งค่าทั่วไปของระบบ</p>
             </div>
-            <div class="card">
+
+            <div class="card mb-6">
                 <h3 class="text-sm font-semibold text-gray-700 mb-4">ข้อมูลร้านค้า</h3>
                 <div style="margin-bottom:16px;">
                     <label class="text-sm text-gray-600" style="display:block;margin-bottom:4px;">ชื่อร้านค้า</label>
@@ -1295,6 +1297,57 @@ function renderSettings(container) {
                 </div>
                 <div style="display:flex;justify-content:flex-end;">
                     <button class="btn-success" onclick="saveSettings()">&#10004; บันทึกการตั้งค่า</button>
+                </div>
+            </div>
+
+            <div class="card mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-1">⏰ ตั้งค่ากะเวลาพนักงาน (Default Shift)</h3>
+                <p class="text-xs text-gray-400 mb-4">ใช้เป็นค่าเริ่มต้นเมื่อสร้างพนักงานใหม่ และอัปเดตพนักงานทั้งหมดได้ด้วยปุ่มด้านล่าง</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <p class="text-xs font-semibold text-blue-700 mb-2">🔵 เข้างาน (Scan 1)</p>
+                        <label class="text-xs text-gray-500">เริ่มนับ (shift1Start)</label>
+                        <input type="time" id="cfg_shift1Start" class="input-field" value="${sc.shift1Start}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">สิ้นสุด (shift1End)</label>
+                        <input type="time" id="cfg_shift1End" class="input-field" value="${sc.shift1End}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">Deadline เข้าสาย (shift1Deadline)</label>
+                        <input type="time" id="cfg_shift1Deadline" class="input-field" value="${sc.shift1Deadline}">
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-orange-700 mb-2">🟠 ออกพัก (Scan 2)</p>
+                        <label class="text-xs text-gray-500">เริ่มนับ (shift2Start)</label>
+                        <input type="time" id="cfg_shift2Start" class="input-field" value="${sc.shift2Start}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">สิ้นสุด (shift2End)</label>
+                        <input type="time" id="cfg_shift2End" class="input-field" value="${sc.shift2End}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">ระยะเวลาพัก (นาที)</label>
+                        <input type="number" id="cfg_breakDuration" class="input-field" value="${sc.breakDurationMinutes || 90}" min="30" max="240">
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-green-700 mb-2">🟢 กลับพัก (Scan 3)</p>
+                        <label class="text-xs text-gray-500">เริ่มนับ (shift3Start)</label>
+                        <input type="time" id="cfg_shift3Start" class="input-field" value="${sc.shift3Start}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">สิ้นสุด (shift3End)</label>
+                        <input type="time" id="cfg_shift3End" class="input-field" value="${sc.shift3End}">
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-red-700 mb-2">🔴 เลิกงาน (Scan 4)</p>
+                        <label class="text-xs text-gray-500">เริ่มนับ (shift4Start)</label>
+                        <input type="time" id="cfg_shift4Start" class="input-field" value="${sc.shift4Start}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">สิ้นสุด (shift4End)</label>
+                        <input type="time" id="cfg_shift4End" class="input-field" value="${sc.shift4End}" style="margin-bottom:8px;">
+                        <label class="text-xs text-gray-500">หักต่อนาที (บาท)</label>
+                        <input type="number" id="cfg_deductionPerMinute" class="input-field" value="${sc.deductionPerMinute || 1}" min="0" step="0.5">
+                    </div>
+                </div>
+
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#92400e;">
+                    ⚠️ <strong>หมายเหตุ:</strong> หากพนักงานสแกนออกพักหลัง 15:00 ให้ตั้ง <strong>shift2End = 17:00</strong> เพื่อให้ระบบรับเวลาออกพักได้ถูกต้อง
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="applyShiftConfigToAll(false)">💾 บันทึก Default เท่านั้น</button>
+                    <button class="btn-success" onclick="applyShiftConfigToAll(true)">🔄 อัปเดตพนักงานทั้งหมด</button>
                 </div>
             </div>
         </div>
@@ -1311,6 +1364,53 @@ async function saveSettings() {
         await api.updateShop(DEFAULT_SHOP_ID, { name: shopName });
         DEFAULT_SHOP_NAME = shopName;
         alert('บันทึกการตั้งค่าสำเร็จ!');
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+}
+
+function readShiftConfigFromUI() {
+    return {
+        shift1Start: document.getElementById('cfg_shift1Start').value,
+        shift1End: document.getElementById('cfg_shift1End').value,
+        shift1Deadline: document.getElementById('cfg_shift1Deadline').value,
+        shift2Start: document.getElementById('cfg_shift2Start').value,
+        shift2End: document.getElementById('cfg_shift2End').value,
+        shift3Start: document.getElementById('cfg_shift3Start').value,
+        shift3End: document.getElementById('cfg_shift3End').value,
+        shift4Start: document.getElementById('cfg_shift4Start').value,
+        shift4End: document.getElementById('cfg_shift4End').value,
+        breakDurationMinutes: parseInt(document.getElementById('cfg_breakDuration').value) || 90,
+        deductionPerMinute: parseFloat(document.getElementById('cfg_deductionPerMinute').value) || 1,
+        breakRoundA_outBefore: DEFAULT_SHIFT_CONFIG.breakRoundA_outBefore,
+        breakRoundA_deadline: DEFAULT_SHIFT_CONFIG.breakRoundA_deadline,
+        breakRoundB_outBefore: DEFAULT_SHIFT_CONFIG.breakRoundB_outBefore,
+        breakRoundB_deadline: DEFAULT_SHIFT_CONFIG.breakRoundB_deadline,
+    };
+}
+
+async function applyShiftConfigToAll(updateEmployees) {
+    const newConfig = readShiftConfigFromUI();
+
+    // Update DEFAULT_SHIFT_CONFIG in memory
+    Object.assign(DEFAULT_SHIFT_CONFIG, newConfig);
+
+    if (!updateEmployees) {
+        alert('บันทึก Default Shift Config สำเร็จ!\n\nพนักงานใหม่จะใช้ค่านี้ แต่พนักงานเดิมยังไม่เปลี่ยน');
+        return;
+    }
+
+    if (!confirm('ต้องการอัปเดต Shift Config ให้พนักงานทุกคนใช่ไหม?\n\n(หลังจากนี้ควรกด "ประมวลผลใหม่" ในหน้าตารางเวลาเพื่อคำนวณใหม่)')) return;
+
+    try {
+        const employees = await api.getEmployees();
+        const shopEmps = employees.filter(e => e.shopId === DEFAULT_SHOP_ID);
+        let count = 0;
+        for (const emp of shopEmps) {
+            await api.updateEmployee(emp.id, { ...emp, shiftConfig: { ...newConfig } });
+            count++;
+        }
+        alert(`✅ อัปเดต Shift Config สำเร็จ! (${count} คน)\n\nกรุณาไปที่ "ตารางเวลา" แล้วกด "ประมวลผลใหม่" เพื่อคำนวณเวลาใหม่`);
     } catch (err) {
         alert('เกิดข้อผิดพลาด: ' + err.message);
     }

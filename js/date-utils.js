@@ -13,7 +13,7 @@ const DEFAULT_SHIFT_CONFIG = {
     shift1End: "11:30",
     shift1Deadline: "10:00",
     shift2Start: "12:00",
-    shift2End: "15:00",
+    shift2End: "17:00",
     shift3Start: "13:00",
     shift3End: "17:00",
     shift4Start: "20:00",
@@ -22,6 +22,7 @@ const DEFAULT_SHIFT_CONFIG = {
     breakRoundA_deadline: "14:30",
     breakRoundB_outBefore: "16:00",
     breakRoundB_deadline: "16:30",
+    breakDurationMinutes: 90,
     deductionPerMinute: 1,
 };
 
