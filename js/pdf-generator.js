@@ -120,38 +120,39 @@ async function generatePDF(records) {
         ]);
 
         // Thai Sarabun font: actual row height = 2×cellPadding + fontSize×0.3528×1.5(Thai lineHeight)
-        // fontSize=8, cellPadding=1.2 → 2.4 + 4.23 = 6.63mm per row
-        // 33 rows (31days+summary+header) × 6.63mm = 218mm < 261mm available → 43mm safety buffer ✓
+        // fontSize=9, cellPadding=1.2 → 2.4 + 4.76 = 7.16mm per row
+        // 33 rows (31days+summary+header) × 7.16mm = 236mm < 261mm available → 25mm safety buffer ✓
+        // Total col width = 176mm; usable = 210-16(margins) = 194mm ✓
         doc.autoTable({
             head: headers,
             body: body,
             startY: 31,
             theme: 'grid',
             styles: {
-                fontSize: 8, cellPadding: 1.2,
+                fontSize: 9, cellPadding: 1.2,
                 halign: 'center', valign: 'middle',
                 font: fontName, lineWidth: 0.1,
                 overflow: 'linebreak',
             },
             headStyles: {
                 fillColor: [37, 99, 235], textColor: [255, 255, 255],
-                fontStyle: 'bold', fontSize: 8, font: fontName,
+                fontStyle: 'bold', fontSize: 9, font: fontName,
                 cellPadding: 1.5,
             },
             columnStyles: {
                 0:  { cellWidth: 7  },   // #
-                1:  { cellWidth: 17 },   // วันที่  "30/04/2026" fits
-                2:  { cellWidth: 13 },   // วัน    "พฤหัส" fits
+                1:  { cellWidth: 18 },   // วันที่  "30/04/2026" fits
+                2:  { cellWidth: 14 },   // วัน    "พฤหัส" fits
                 3:  { cellWidth: 8  },   // หยุด
                 4:  { cellWidth: 13 },   // เข้า
-                5:  { cellWidth: 14 },   // พักออก
-                6:  { cellWidth: 14 },   // พักเข้า
+                5:  { cellWidth: 15 },   // พักออก
+                6:  { cellWidth: 15 },   // พักเข้า
                 7:  { cellWidth: 13 },   // เลิก
-                8:  { cellWidth: 14 },   // เข้าสาย
-                9:  { cellWidth: 13 },   // หัก(บ.)
-                10: { cellWidth: 15 },   // รอบพัก "D/16:30" = 7 chars, fits in 15mm
-                11: { cellWidth: 13 },   // สายพัก
-                12: { cellWidth: 13 },   // หัก(บ.)
+                8:  { cellWidth: 15 },   // เข้าสาย
+                9:  { cellWidth: 14 },   // หัก(บ.)
+                10: { cellWidth: 16 },   // รอบพัก "D/16:30" fits in 16mm
+                11: { cellWidth: 14 },   // สายพัก
+                12: { cellWidth: 14 },   // หัก(บ.)
             },
             margin: { left: 8, right: 8, bottom: 5 },
             didParseCell: function (data) {
